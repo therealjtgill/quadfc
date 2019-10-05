@@ -1,7 +1,11 @@
-#include "C:\Users\jtgil\Documents\Quadcopter\pidlib\pid.hpp"
+#include "pid.hpp"
 #include <Wire.h>
 #define CYCLELEN 2500 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
+
+#define PRINTRXPULSES 1
+#define PRINTMOTORPULSES 0
+#define PRINTIMUINPUT 0
 
 uint16_t current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -292,7 +296,6 @@ void loop() {
   if (!initialized)
   {
     calculateGyroBiases(&phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias);
-    for (unsigned int i = 0; i < 4; ++i)
     initialized = true;
     t = micros();
   }
@@ -307,6 +310,15 @@ void loop() {
   rxPulsesToSetPoints(
     &phi_set, &theta_set, &psi_rate_set
   );
+
+  if (PRINTRXPULSES)
+  {
+    Serial.print(rx_pulses[0]); Serial.print(" ");
+    Serial.print(rx_pulses[1]); Serial.print(" ");
+    Serial.print(rx_pulses[2]); Serial.print(" ");
+    Serial.print(rx_pulses[3]); Serial.print(" ");
+    Serial.println("");
+  }
 
   calculatePidControls(
     &phi_meas, &theta_meas, &psi_rate_meas,
@@ -353,7 +365,7 @@ void loop() {
   }
 
   // Pause for the rest of the 2500us loop.
-  while (cycleStartTime + 2500 < micros());
+  //while (cycleStartTime + 2500 > micros());
 }
 
 /////////////////////////////////////////////////
