@@ -3,9 +3,12 @@
 #define CYCLELEN 2500 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
-#define PRINTRXPULSES 1
-#define PRINTMOTORPULSES 0
+#define PRINTRXPULSES 0
+#define PRINTMOTORPULSES 1
 #define PRINTIMUINPUT 0
+#define PRINTPIDOUTPUT 1
+#define PRINTSETPOINTS 1
+#define PRINTCYCLELENGTH 1
 
 uint16_t current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -62,10 +65,10 @@ void setup() {
   // Arm the speed controllers
   for (unsigned int i = 0; i < 5; ++i)
   {
-    PORTD |= B00111100;
-    delayMicroseconds(1000);
-    PORTD &= B00111100;
-    delayMicroseconds(5500);
+    //PORTD |= B00111100;
+    //delayMicroseconds(1000);
+    //PORTD &= B00111100;
+    //delayMicroseconds(5500);
   }
 
   for (unsigned int i = 0; i < 4; ++i)
@@ -94,7 +97,7 @@ float interpolateLinear(
   float input
 )
 {
-  float m = ((input_max - input_min)/(output_max - output_min));
+  float m = ((output_max - output_min)/(input_max - input_min));
   return max(
     min(
       m*input + output_min - m*input_min,
@@ -153,6 +156,7 @@ void calculateGyroBiases(
   *phi_rate_bias_out = 0.;
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
+
   for (unsigned int i = 0; i < 1000; ++i)
   {
     getImuData(acc, gyro);
@@ -185,18 +189,22 @@ void updateAngleCalculations(
   static float theta_acc    = 0.;
   const static float alpha  = 0.97;
 
+  float phi_prev = *phi_out;
+  float theta_prev = *theta_out;
+
   getImuData(acc_meas, gyro_meas);
 
-  *psi_rate_out = gyro_meas[2];
+  *psi_rate_out = gyro_meas[2] - *psi_rate_bias;
+  
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
   if (phi_acc > 180.)
   {
     phi_acc -= 360;
   }
-  *phi_out = alpha*(*phi_out + (gyro_meas[0] - (*phi_rate_bias))*dt) + (1 - alpha)*(phi_acc);
+  *phi_out = (alpha*(phi_prev + (gyro_meas[0] - (*phi_rate_bias))*dt) + (1 - alpha)*(phi_acc))*M_PI/180.;
 
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
-  *theta_out = alpha*(*theta_out + (gyro_meas[1] - (*theta_rate_bias))*dt) + (1 - alpha)*(theta_acc);
+  *theta_out = (alpha*(theta_prev + (gyro_meas[1] - (*theta_rate_bias))*dt) + (1 - alpha)*(theta_acc))*M_PI/180.;
 }
 
 /////////////////////////////////////////////////
@@ -217,9 +225,9 @@ void calculatePidControls(
   uint16_t * y_psi_rate
 )
 {
-  static PID<int> phi_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
-  static PID<int> theta_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
-  static PID<int> psi_rate_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
+  static PID<float> phi_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
+  static PID<float> theta_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
+  static PID<float> psi_rate_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
 
   *y_phi = (uint16_t )phi_pid.filter(*x_phi, *u_phi);
   *y_theta = (uint16_t )theta_pid.filter(*x_theta, *u_theta);
@@ -293,23 +301,40 @@ void loop() {
   static uint16_t throttle = 0;
   static uint16_t motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
+  static unsigned long loopTime = 0;
+
   if (!initialized)
   {
     calculateGyroBiases(&phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias);
+    loopTime = 0;
     initialized = true;
     t = micros();
   }
 
   cycleStartTime = micros();
-  dt = motorStartTime - cycleStartTime;
+  dt = (motorStartTime - cycleStartTime)/1e6;
   updateAngleCalculations(
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &psi_rate_meas
   );
 
+  if (PRINTIMUINPUT)
+  {
+    Serial.print(phi_meas);      Serial.print(" ");
+    Serial.print(theta_meas);    Serial.print(" ");
+    //Serial.print(psi_rate_meas); Serial.print(" ");
+  }
+
   rxPulsesToSetPoints(
     &phi_set, &theta_set, &psi_rate_set
   );
+
+  if (PRINTSETPOINTS)
+  {
+    Serial.print(phi_set); Serial.print(" ");
+    Serial.print(theta_set); Serial.print(" ");
+    Serial.print(psi_rate_set); Serial.print(" ");
+  }
 
   if (PRINTRXPULSES)
   {
@@ -317,7 +342,6 @@ void loop() {
     Serial.print(rx_pulses[1]); Serial.print(" ");
     Serial.print(rx_pulses[2]); Serial.print(" ");
     Serial.print(rx_pulses[3]); Serial.print(" ");
-    Serial.println("");
   }
 
   calculatePidControls(
@@ -326,15 +350,30 @@ void loop() {
     &phi_ctl, &theta_ctl, &psi_rate_ctl
   );
 
-  // Turn all of motor pulses on.
-  PORTD |= B00111100;
+  if (PRINTPIDOUTPUT)
+  {
+    Serial.print(phi_ctl); Serial.print(" ");
+    Serial.print(theta_ctl); Serial.print(" ");
+    Serial.print(psi_rate_ctl); Serial.print(" ");
+  }
 
   // Throttle = rx_pulses[2]
   calculateMotorMixtures(
     phi_ctl, theta_ctl, psi_rate_ctl, rx_pulses[2], motor_timers
   );
 
+  if (PRINTMOTORPULSES)
+  {
+    Serial.print(motor_timers[0]); Serial.print(" ");
+    Serial.print(motor_timers[1]); Serial.print(" ");
+    Serial.print(motor_timers[2]); Serial.print(" ");
+    Serial.print(motor_timers[3]); Serial.print(" ");
+  }
+
   motorStartTime = micros();
+
+  // Turn all of motor pulses on.
+  PORTD |= B00111100;
 
   motor_timers[0] += motorStartTime;
   motor_timers[1] += motorStartTime;
@@ -344,7 +383,6 @@ void loop() {
   // PORTD will become B00000000 within 2000us.
   while (PORTD >= 4)
   {
-    static unsigned long loopTime = 0;
     loopTime = micros();
     if (motor_timers[0] <= loopTime)
     {
@@ -364,8 +402,17 @@ void loop() {
     }
   }
 
+  if (PRINTCYCLELENGTH)
+  {
+    Serial.print(micros() - cycleStartTime); Serial.print(" ");
+  }
+
   // Pause for the rest of the 2500us loop.
-  //while (cycleStartTime + 2500 > micros());
+  while (cycleStartTime + 4000 > micros());
+  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT)
+  {
+    Serial.println("");
+  }
 }
 
 /////////////////////////////////////////////////
