@@ -1,14 +1,15 @@
 #include "pid.hpp"
 #include <Wire.h>
-#define CYCLELEN 2500 // Cycle length in microseconds
+#define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES 0
-#define PRINTMOTORPULSES 0
-#define PRINTIMUINPUT 1
-#define PRINTPIDOUTPUT 0
 #define PRINTSETPOINTS 0
+#define PRINTIMUDEGINPUT 0
+#define PRINTIMURADINPUT 0
+#define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
+#define PRINTMOTORPULSES 1
 #define PRINTCYCLELENGTH 0
 
 uint16_t current_time = 0;
@@ -221,49 +222,49 @@ void calculatePidControls(
   const float * u_phi,
   const float * u_theta,
   const float * u_psi_rate,
-  uint16_t * y_phi,
-  uint16_t * y_theta,
-  uint16_t * y_psi_rate
+  int16_t * y_phi,
+  int16_t * y_theta,
+  int16_t * y_psi_rate
 )
 {
-  static PID<float> phi_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
-  static PID<float> theta_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
-  static PID<float> psi_rate_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> phi_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> theta_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> psi_rate_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
 
   // Output pulse length should be between 1000 and 2000.
 
-  float x_phi_rad = *x_phi_deg*(M_PI/180.);
-  float x_theta_rad = *x_theta_deg*(M_PI/180.);
-  float x_psi_rate_radps = *x_psi_rate_degps*(M_PI/180.);
+  float x_phi_rad = (*x_phi_deg)*(M_PI/180.);
+  float x_theta_rad = (*x_theta_deg)*(M_PI/180.);
+  float x_psi_rate_radps = (*x_psi_rate_degps)*(M_PI/180.);
 
   float phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
   float theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
   float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_radps, *u_psi_rate);
 
-  *y_phi = static_cast<uint16_t>(
+  *y_phi = static_cast<int16_t>(
     interpolateLinear(
-      -1.5,
-      1.5,
-      1000.,
-      2000.,
+      -10.5,
+      10.5,
+      -400.,
+      400.,
       phi_filtered
     )
   );
-  *y_theta = static_cast<uint16_t>(
+  *y_theta = static_cast<int16_t>(
     interpolateLinear(
-      -1.5,
-      1.5,
-      1000.,
-      2000.,
+      -10.5,
+      10.5,
+      -400.,
+      400.,
       theta_filtered
     )
   );
-  *y_psi_rate = static_cast<uint16_t>(
+  *y_psi_rate = static_cast<int16_t>(
     interpolateLinear(
-      -1.5,
-      1.5,
-      1000.,
-      2000.,
+      -10.5,
+      10.5,
+      -400.,
+      400.,
       psi_rate_filtered
     )
   );
@@ -272,7 +273,9 @@ void calculatePidControls(
   {
     Serial.print(phi_filtered); Serial.print(" ");
     Serial.print(theta_filtered); Serial.print(" ");
-    Serial.print(psi_rate_filtered); Serial.print(" ");
+    // The psi_rate measurement is super noisy, might need to add a
+    // low-pass filter to it.
+    //Serial.print(psi_rate_filtered); Serial.print(" ");
   }
 }
 
@@ -288,28 +291,28 @@ void rxPulsesToSetPoints(
   // rx_pulses is a global array. size should always be 4.
   *u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
   *u_theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
-  *u_psi_rate_out = interpolateLinear(1000, 2000, -4*M_PI, 4*M_PI, rx_pulses[3]);
+  *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
 }
 
 /////////////////////////////////////////////////
 // calculateMotorMixtures
 /////////////////////////////////////////////////
 void calculateMotorMixtures(
-  const uint16_t & phi_ctl,
-  const uint16_t & theta_ctl,
-  const uint16_t & psi_rate_ctl,
-  const uint16_t & throttle,
+  const int16_t & phi_ctl,
+  const int16_t & theta_ctl,
+  const int16_t & psi_rate_ctl,
+  const int16_t & throttle,
   uint16_t * motor_timers_out
 )
 {
   static uint16_t tempMix = 0;
-  tempMix = (throttle + phi_ctl - theta_ctl - psi_rate_ctl);
+  tempMix = (throttle + phi_ctl - theta_ctl - 0/*psi_rate_ctl*/);
   motor_timers_out[0] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle - phi_ctl - theta_ctl + psi_rate_ctl);
+  tempMix = (throttle - phi_ctl - theta_ctl + 0/*psi_rate_ctl*/);
   motor_timers_out[1] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle - phi_ctl + theta_ctl - psi_rate_ctl);
+  tempMix = (throttle - phi_ctl + theta_ctl - 0/*psi_rate_ctl*/);
   motor_timers_out[2] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle + phi_ctl + theta_ctl + psi_rate_ctl);
+  tempMix = (throttle + phi_ctl + theta_ctl + 0/*psi_rate_ctl*/);
   motor_timers_out[3] = clamp(tempMix, 900, 1800);
 }
 
@@ -325,9 +328,9 @@ void loop() {
   static float theta_meas = 0.;
   static float psi_rate_meas = 0.;
 
-  static uint16_t phi_ctl = 0.;
-  static uint16_t theta_ctl = 0.;
-  static uint16_t psi_rate_ctl = 0.;
+  static int16_t phi_ctl = 0.;
+  static int16_t theta_ctl = 0.;
+  static int16_t psi_rate_ctl = 0.;
 
   static float phi_set = 0.;
   static float theta_set = 0.;
@@ -340,7 +343,7 @@ void loop() {
   static float t = 0.;
   static float dt = 0.;
 
-  static uint16_t throttle = 0;
+  static int16_t throttle = 0;
   static uint16_t motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
   static unsigned long loopTime = 0;
@@ -360,11 +363,18 @@ void loop() {
     &phi_meas, &theta_meas, &psi_rate_meas
   );
 
-  if (PRINTIMUINPUT)
+  if (PRINTIMUDEGINPUT)
   {
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
     //Serial.print(psi_rate_meas); Serial.print(" ");
+  }
+
+  if (PRINTIMURADINPUT)
+  {
+    Serial.print(phi_meas*M_PI/180.);      Serial.print(" ");
+    Serial.print(theta_meas*M_PI/180.);    Serial.print(" ");
+    //Serial.print(psi_rate_meas*M_PI/180.); Serial.print(" ");
   }
 
   rxPulsesToSetPoints(
@@ -450,8 +460,9 @@ void loop() {
   }
 
   // Pause for the rest of the 2500us loop.
-  while (cycleStartTime + 4000 > micros());
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL)
+  while (cycleStartTime + CYCLELEN > micros());
+
+  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS)
   {
     Serial.println("");
   }
