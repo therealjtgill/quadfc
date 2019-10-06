@@ -4,11 +4,12 @@
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES 0
-#define PRINTMOTORPULSES 1
-#define PRINTIMUINPUT 0
-#define PRINTPIDOUTPUT 1
-#define PRINTSETPOINTS 1
-#define PRINTCYCLELENGTH 1
+#define PRINTMOTORPULSES 0
+#define PRINTIMUINPUT 1
+#define PRINTPIDOUTPUT 0
+#define PRINTSETPOINTS 0
+#define PRINTPIDCONTROL 0
+#define PRINTCYCLELENGTH 0
 
 uint16_t current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -178,9 +179,9 @@ void updateAngleCalculations(
   const float * theta_rate_bias,
   const float * psi_rate_bias,
   const float dt,
-  float * phi_out,
-  float * theta_out,
-  float * psi_rate_out
+  float * phi_deg_out,
+  float * theta_deg_out,
+  float * psi_rate_degps_out
 )
 {
   static float acc_meas[3]  = {0., 0., 0.};
@@ -189,22 +190,22 @@ void updateAngleCalculations(
   static float theta_acc    = 0.;
   const static float alpha  = 0.97;
 
-  float phi_prev = *phi_out;
-  float theta_prev = *theta_out;
+  float phi_prev = *phi_deg_out;
+  float theta_prev = *theta_deg_out;
 
   getImuData(acc_meas, gyro_meas);
 
-  *psi_rate_out = gyro_meas[2] - *psi_rate_bias;
+  *psi_rate_degps_out = gyro_meas[2] - *psi_rate_bias;
   
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
   if (phi_acc > 180.)
   {
     phi_acc -= 360;
   }
-  *phi_out = (alpha*(phi_prev + (gyro_meas[0] - (*phi_rate_bias))*dt) + (1 - alpha)*(phi_acc))*M_PI/180.;
+  *phi_deg_out = alpha*(phi_prev + (gyro_meas[0] - (*phi_rate_bias))*dt) + (1 - alpha)*(phi_acc);
 
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
-  *theta_out = (alpha*(theta_prev + (gyro_meas[1] - (*theta_rate_bias))*dt) + (1 - alpha)*(theta_acc))*M_PI/180.;
+  *theta_deg_out = alpha*(theta_prev + (gyro_meas[1] - (*theta_rate_bias))*dt) + (1 - alpha)*(theta_acc);
 }
 
 /////////////////////////////////////////////////
@@ -214,9 +215,9 @@ void updateAngleCalculations(
 // u - setpoint
 // y - output
 void calculatePidControls(
-  const float * x_phi,
-  const float * x_theta,
-  const float * x_psi_rate,
+  const float * x_phi_deg,
+  const float * x_theta_deg,
+  const float * x_psi_rate_degps,
   const float * u_phi,
   const float * u_theta,
   const float * u_psi_rate,
@@ -225,28 +226,69 @@ void calculatePidControls(
   uint16_t * y_psi_rate
 )
 {
-  static PID<float> phi_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
-  static PID<float> theta_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
-  static PID<float> psi_rate_pid(1.0, 0., 0.1, 0., 0., 1000, 2000);
+  static PID<float> phi_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> theta_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> psi_rate_pid(1.0, 0., 0.1, 0., 0., -100., 100.);
 
-  *y_phi = (uint16_t )phi_pid.filter(*x_phi, *u_phi);
-  *y_theta = (uint16_t )theta_pid.filter(*x_theta, *u_theta);
-  *y_psi_rate = (uint16_t )psi_rate_pid.filter(*x_psi_rate, *u_psi_rate);
+  // Output pulse length should be between 1000 and 2000.
+
+  float x_phi_rad = *x_phi_deg*(M_PI/180.);
+  float x_theta_rad = *x_theta_deg*(M_PI/180.);
+  float x_psi_rate_radps = *x_psi_rate_degps*(M_PI/180.);
+
+  float phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
+  float theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
+  float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_radps, *u_psi_rate);
+
+  *y_phi = static_cast<uint16_t>(
+    interpolateLinear(
+      -1.5,
+      1.5,
+      1000.,
+      2000.,
+      phi_filtered
+    )
+  );
+  *y_theta = static_cast<uint16_t>(
+    interpolateLinear(
+      -1.5,
+      1.5,
+      1000.,
+      2000.,
+      theta_filtered
+    )
+  );
+  *y_psi_rate = static_cast<uint16_t>(
+    interpolateLinear(
+      -1.5,
+      1.5,
+      1000.,
+      2000.,
+      psi_rate_filtered
+    )
+  );
+
+  if (PRINTPIDOUTPUT)
+  {
+    Serial.print(phi_filtered); Serial.print(" ");
+    Serial.print(theta_filtered); Serial.print(" ");
+    Serial.print(psi_rate_filtered); Serial.print(" ");
+  }
 }
 
 /////////////////////////////////////////////////
 // rxPulsesToSetPoints
 /////////////////////////////////////////////////
 void rxPulsesToSetPoints(
-  float * phi_out,
-  float * theta_out,
-  float * psi_rate_out
+  float * u_phi_out,
+  float * u_theta_out,
+  float * u_psi_rate_out
 )
 {
   // rx_pulses is a global array. size should always be 4.
-  *phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
-  *theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
-  *psi_rate_out = interpolateLinear(1000, 2000, -4*M_PI, 4*M_PI, rx_pulses[3]);
+  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
+  *u_psi_rate_out = interpolateLinear(1000, 2000, -4*M_PI, 4*M_PI, rx_pulses[3]);
 }
 
 /////////////////////////////////////////////////
@@ -350,11 +392,11 @@ void loop() {
     &phi_ctl, &theta_ctl, &psi_rate_ctl
   );
 
-  if (PRINTPIDOUTPUT)
+  if (PRINTPIDCONTROL)
   {
     Serial.print(phi_ctl); Serial.print(" ");
     Serial.print(theta_ctl); Serial.print(" ");
-    Serial.print(psi_rate_ctl); Serial.print(" ");
+    //Serial.print(psi_rate_ctl); Serial.print(" ");
   }
 
   // Throttle = rx_pulses[2]
@@ -409,7 +451,7 @@ void loop() {
 
   // Pause for the rest of the 2500us loop.
   while (cycleStartTime + 4000 > micros());
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT)
+  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL)
   {
     Serial.println("");
   }
