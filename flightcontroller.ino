@@ -135,7 +135,9 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    gyro_meas_out[i] = (2.0)*((float)((Wire.read() << 8) | Wire.read()))/16.4;
+    // The factor of 400 exists to make numerical integration of angular rates
+    // from gyro roughly equal to accelerometer measurements (see mpu6050compfilt.ino).
+    gyro_meas_out[i] = (400.0)*((float)((Wire.read() << 8) | Wire.read()))/16.4;
     if (i == 1)
     {
       gyro_meas_out[i] *= -1.0;
@@ -273,8 +275,7 @@ void calculatePidControls(
   {
     Serial.print(phi_filtered); Serial.print(" ");
     Serial.print(theta_filtered); Serial.print(" ");
-    // The psi_rate measurement is super noisy, might need to add a
-    // low-pass filter to it.
+    // The psi_rate measurement is super noisy, might need to low-pass filter it.
     //Serial.print(psi_rate_filtered); Serial.print(" ");
   }
 }
@@ -356,8 +357,8 @@ void loop() {
     t = micros();
   }
 
+  dt = (micros() - cycleStartTime)/1e6;
   cycleStartTime = micros();
-  dt = (motorStartTime - cycleStartTime)/1e6;
   updateAngleCalculations(
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &psi_rate_meas
@@ -374,7 +375,7 @@ void loop() {
   {
     Serial.print(phi_meas*M_PI/180.);      Serial.print(" ");
     Serial.print(theta_meas*M_PI/180.);    Serial.print(" ");
-    //Serial.print(psi_rate_meas*M_PI/180.); Serial.print(" ");
+    Serial.print(psi_rate_meas*M_PI/180.); Serial.print(" ");
   }
 
   rxPulsesToSetPoints(
@@ -466,6 +467,7 @@ void loop() {
   {
     Serial.println("");
   }
+  //t = micros();
 }
 
 /////////////////////////////////////////////////
