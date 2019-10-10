@@ -8,8 +8,8 @@
 #define PRINTIMUDEGINPUT 0
 #define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
-#define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 1
+#define PRINTPIDCONTROL 1
+#define PRINTMOTORPULSES 0
 #define PRINTCYCLELENGTH 0
 
 uint16_t current_time = 0;
@@ -231,7 +231,9 @@ void calculatePidControls(
 {
   static PID<float> phi_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
   static PID<float> theta_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
-  static PID<float> psi_rate_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
+  // Yaw rates can be large, the gains on yaw rate are lowered by a factor of 8 so
+  // that the yaw PID output doesn't overwhelm the other PID outputs.
+  static PID<float> psi_rate_pid(3.0/8.0, 0., 0.1/8.0, 0., 0., -100., 100.);
 
   // Output pulse length should be between 1000 and 2000.
 
@@ -276,7 +278,7 @@ void calculatePidControls(
     Serial.print(phi_filtered); Serial.print(" ");
     Serial.print(theta_filtered); Serial.print(" ");
     // The psi_rate measurement is super noisy, might need to low-pass filter it.
-    //Serial.print(psi_rate_filtered); Serial.print(" ");
+    Serial.print(psi_rate_filtered); Serial.print(" ");
   }
 }
 
@@ -373,7 +375,7 @@ void loop() {
   {
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
-    //Serial.print(psi_rate_meas); Serial.print(" ");
+    Serial.print(psi_rate_meas); Serial.print(" ");
   }
 
   if (PRINTIMURADINPUT)
@@ -412,7 +414,7 @@ void loop() {
   {
     Serial.print(phi_ctl); Serial.print(" ");
     Serial.print(theta_ctl); Serial.print(" ");
-    //Serial.print(psi_rate_ctl); Serial.print(" ");
+    Serial.print(psi_rate_ctl); Serial.print(" ");
   }
 
   // Throttle = rx_pulses[2]
