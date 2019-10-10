@@ -137,7 +137,7 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   {
     // The factor of 400 exists to make numerical integration of angular rates
     // from gyro roughly equal to accelerometer measurements (see mpu6050compfilt.ino).
-    gyro_meas_out[i] = (400.0)*((float)((Wire.read() << 8) | Wire.read()))/16.4;
+    gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
     if (i == 1)
     {
       gyro_meas_out[i] *= -1.0;
@@ -321,8 +321,8 @@ void calculateMotorMixtures(
 // Main Loop
 /////////////////////////////////////////////////
 void loop() {
-  static float cycleStartTime = 0.;
-  static float motorStartTime = 0.;
+  static double cycleStartTime = 0.;
+  static double motorStartTime = 0.;
   static bool initialized = false;
 
   static float phi_meas = 0.;
@@ -341,8 +341,8 @@ void loop() {
   static float theta_rate_gyr_bias = 0.;
   static float psi_rate_gyr_bias = 0.;
 
-  static float t = 0.;
-  static float dt = 0.;
+  static double t = 0.;
+  static double dt = 0.;
 
   static int16_t throttle = 0;
   static uint16_t motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -356,8 +356,13 @@ void loop() {
     initialized = true;
     t = micros();
   }
+  
+  if (PRINTCYCLELENGTH)
+  {
+    Serial.print(t - cycleStartTime); Serial.print(" ");
+  }
 
-  dt = (micros() - cycleStartTime)/1e6;
+  dt = (t - cycleStartTime)/1e6;
   cycleStartTime = micros();
   updateAngleCalculations(
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
@@ -454,12 +459,12 @@ void loop() {
       PORTD &= B11011111;
     }
   }
-
+/*
   if (PRINTCYCLELENGTH)
   {
     Serial.print(micros() - cycleStartTime); Serial.print(" ");
   }
-
+*/
   // Pause for the rest of the 2500us loop.
   while (cycleStartTime + CYCLELEN > micros());
 
@@ -467,7 +472,7 @@ void loop() {
   {
     Serial.println("");
   }
-  //t = micros();
+  t = micros();
 }
 
 /////////////////////////////////////////////////
