@@ -8,8 +8,9 @@
 #define PRINTIMUDEGINPUT 0
 #define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
-#define PRINTPIDCONTROL 1
-#define PRINTMOTORPULSES 0
+#define PRINTPIDCONTROL 0
+#define PRINTMOTORPULSES 1
+#define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
 uint16_t current_time = 0;
@@ -67,10 +68,18 @@ void setup() {
   // Arm the speed controllers
   for (unsigned int i = 0; i < 5; ++i)
   {
-    //PORTD |= B00111100;
-    //delayMicroseconds(1000);
-    //PORTD &= B00111100;
-    //delayMicroseconds(5500);
+    PORTD |= B00111100;
+    delayMicroseconds(1000);
+    PORTD &= B00111100;
+    delayMicroseconds(5500);
+  }
+
+  for (unsigned int i = 0; i < 1000; ++i)
+  {
+    PORTD != B00111100;
+    delayMicroseconds(1700);
+    PORTD &= B00111100;
+    delayMicroseconds(300);
   }
 
   for (unsigned int i = 0; i < 4; ++i)
@@ -309,13 +318,17 @@ void calculateMotorMixtures(
 )
 {
   static uint16_t tempMix = 0;
-  tempMix = (throttle + phi_ctl - theta_ctl - 0/*psi_rate_ctl*/);
+  //tempMix = (throttle + phi_ctl - theta_ctl - 0/*psi_rate_ctl*/);
+  tempMix = (throttle + phi_ctl - theta_ctl - psi_rate_ctl);
   motor_timers_out[0] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle - phi_ctl - theta_ctl + 0/*psi_rate_ctl*/);
+  //tempMix = (throttle - phi_ctl - theta_ctl + 0/*psi_rate_ctl*/);
+  tempMix = (throttle - phi_ctl - theta_ctl + psi_rate_ctl);
   motor_timers_out[1] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle - phi_ctl + theta_ctl - 0/*psi_rate_ctl*/);
+  //tempMix = (throttle - phi_ctl + theta_ctl - 0/*psi_rate_ctl*/);
+  tempMix = (throttle - phi_ctl + theta_ctl - psi_rate_ctl);
   motor_timers_out[2] = clamp(tempMix, 900, 1800);
-  tempMix = (throttle + phi_ctl + theta_ctl + 0/*psi_rate_ctl*/);
+  //tempMix = (throttle + phi_ctl + theta_ctl + 0/*psi_rate_ctl*/);
+  tempMix = (throttle + phi_ctl + theta_ctl + psi_rate_ctl);
   motor_timers_out[3] = clamp(tempMix, 900, 1800);
 }
 
@@ -347,7 +360,8 @@ void loop() {
   static double dt = 0.;
 
   static int16_t throttle = 0;
-  static uint16_t motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
+  static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
+  static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
   static unsigned long loopTime = 0;
 
@@ -419,26 +433,26 @@ void loop() {
 
   // Throttle = rx_pulses[2]
   calculateMotorMixtures(
-    phi_ctl, theta_ctl, psi_rate_ctl, rx_pulses[2], motor_timers
+    phi_ctl, theta_ctl, psi_rate_ctl, rx_pulses[2], motor_pulses
   );
 
   if (PRINTMOTORPULSES)
   {
-    Serial.print(motor_timers[0]); Serial.print(" ");
-    Serial.print(motor_timers[1]); Serial.print(" ");
-    Serial.print(motor_timers[2]); Serial.print(" ");
-    Serial.print(motor_timers[3]); Serial.print(" ");
+    Serial.print(motor_pulses[0]); Serial.print(" ");
+    Serial.print(motor_pulses[1]); Serial.print(" ");
+    Serial.print(motor_pulses[2]); Serial.print(" ");
+    Serial.print(motor_pulses[3]); Serial.print(" ");
   }
-
-  motorStartTime = micros();
 
   // Turn all of motor pulses on.
   PORTD |= B00111100;
 
-  motor_timers[0] += motorStartTime;
-  motor_timers[1] += motorStartTime;
-  motor_timers[2] += motorStartTime;
-  motor_timers[3] += motorStartTime;
+  motorStartTime = micros();
+
+  motor_timers[0] = motor_pulses[0] + motorStartTime;
+  motor_timers[1] = motor_pulses[1] + motorStartTime;
+  motor_timers[2] = motor_pulses[2] + motorStartTime;
+  motor_timers[3] = motor_pulses[3] + motorStartTime;
 
   // PORTD will become B00000000 within 2000us.
   while (PORTD >= 4)
@@ -461,16 +475,19 @@ void loop() {
       PORTD &= B11011111;
     }
   }
-/*
-  if (PRINTCYCLELENGTH)
+
+  if (PRINTMOTORTIMERS)
   {
-    Serial.print(micros() - cycleStartTime); Serial.print(" ");
+    Serial.print(motor_timers[0]); Serial.print(" ");
+    Serial.print(motor_timers[1]); Serial.print(" ");
+    Serial.print(motor_timers[2]); Serial.print(" ");
+    Serial.print(motor_timers[3]); Serial.print(" ");
   }
-*/
-  // Pause for the rest of the 2500us loop.
+
+  // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN > micros());
 
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS)
+  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS)
   {
     Serial.println("");
   }
