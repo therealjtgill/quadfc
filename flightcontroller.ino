@@ -135,8 +135,6 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    // The factor of 400 exists to make numerical integration of angular rates
-    // from gyro roughly equal to accelerometer measurements (see mpu6050compfilt.ino).
     gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
     if (i == 1)
     {
