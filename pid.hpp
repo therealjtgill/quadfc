@@ -74,4 +74,14 @@ class PID
 
 };
 
+
+/////////////////////////////////////////////////
+// clamp
+/////////////////////////////////////////////////
+template <typename T>
+T clamp(T val, T min_val, T max_val)
+{
+  return max(min(val, max_val), min_val);
+}
+
 #endif

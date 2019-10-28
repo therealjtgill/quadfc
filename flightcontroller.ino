@@ -9,11 +9,11 @@
 #define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 1
+#define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
-uint16_t current_time = 0;
+int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 int rx_channels_last[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 int rx_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -90,14 +90,6 @@ void setup() {
 }
 
 /////////////////////////////////////////////////
-// clamp
-/////////////////////////////////////////////////
-uint16_t clamp(uint16_t & val, uint16_t min, uint16_t max)
-{
-  return max(min(val, max), min);
-}
-
-/////////////////////////////////////////////////
 // interpolateLinear
 /////////////////////////////////////////////////
 float interpolateLinear(
@@ -105,17 +97,22 @@ float interpolateLinear(
   float input_max,
   float output_min,
   float output_max,
-  float input
+  float input,
+  bool clamp=true
 )
 {
   float m = ((output_max - output_min)/(input_max - input_min));
-  return max(
-    min(
-      m*input + output_min - m*input_min,
-      output_max
-    ),
-    output_min
-  );
+  if (clamp)
+  {
+    return max(
+      min(
+        m*input + output_min - m*input_min,
+        output_max
+      ),
+      output_min
+    );
+  }
+  return m*input + output_min - m*input_min;
 }
 
 /////////////////////////////////////////////////
@@ -134,7 +131,6 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   for (i = 0; i < 3; ++i)
   {
     acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
-    //Serial.println(acc_meas_out[i]);
   }
 
   for (i = 0; i < 2; ++i)
@@ -238,11 +234,11 @@ void calculatePidControls(
   int16_t * y_psi_rate
 )
 {
-  static PID<float> phi_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
-  static PID<float> theta_pid(3.0, 0., 0.1, 0., 0., -100., 100.);
+  static PID<float> phi_pid(3.4, 0., 15.0, 0., 0., -100., 100.);
+  static PID<float> theta_pid(3.4, 0., 15.0, 0., 0., -100., 100.);
   // Yaw rates can be large, the gains on yaw rate are lowered by a factor of 8 so
   // that the yaw PID output doesn't overwhelm the other PID outputs.
-  static PID<float> psi_rate_pid(3.0/8.0, 0., 0.1/8.0, 0., 0., -100., 100.);
+  static PID<float> psi_rate_pid(3.0/8.0, 0., 0.15/8.0, 0., 0., -100., 100.);
 
   // Output pulse length should be between 1000 and 2000.
 
@@ -251,9 +247,12 @@ void calculatePidControls(
   float x_psi_rate_radps = (*x_psi_rate_degps)*(M_PI/180.);
 
   float phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
+  //float phi_filtered = phi_pid.filter(x_phi_deg, *u_phi);
   float theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
+  //float theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
   float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_radps, *u_psi_rate);
-
+  //float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_degps, *u_psi_rate);
+/*
   *y_phi = static_cast<int16_t>(
     interpolateLinear(
       -10.5,
@@ -281,7 +280,28 @@ void calculatePidControls(
       psi_rate_filtered
     )
   );
-
+*/
+  *y_phi = static_cast<int16_t>(
+    clamp<float>(
+      37*phi_filtered,
+      -400.,
+      400.
+    )
+  );
+  *y_theta = static_cast<int16_t>(
+    clamp<float>(
+      37*theta_filtered,
+      -400.,
+      400.
+    )
+  );
+  *y_psi_rate = static_cast<int16_t>(
+    clamp<float>(
+      37*psi_rate_filtered,
+      -400.,
+      400.
+    )
+  );
   if (PRINTPIDOUTPUT)
   {
     Serial.print(phi_filtered); Serial.print(" ");
@@ -302,8 +322,11 @@ void rxPulsesToSetPoints(
 {
   // rx_pulses is a global array. size should always be 4.
   *u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  //*u_phi_out      = interpolateLinear(1000, 2000, -45., 45., rx_pulses[1]);
   *u_theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
+  //*u_theta_out    = interpolateLinear(1000, 2000, -45., 45., rx_pulses[0]);
   *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
+  //*u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
 }
 
 /////////////////////////////////////////////////
@@ -318,18 +341,23 @@ void calculateMotorMixtures(
 )
 {
   static uint16_t tempMix = 0;
-  //tempMix = (throttle + phi_ctl - theta_ctl - 0/*psi_rate_ctl*/);
-  tempMix = (throttle + phi_ctl - theta_ctl - psi_rate_ctl);
-  motor_timers_out[0] = clamp(tempMix, 900, 1800);
-  //tempMix = (throttle - phi_ctl - theta_ctl + 0/*psi_rate_ctl*/);
-  tempMix = (throttle - phi_ctl - theta_ctl + psi_rate_ctl);
-  motor_timers_out[1] = clamp(tempMix, 900, 1800);
-  //tempMix = (throttle - phi_ctl + theta_ctl - 0/*psi_rate_ctl*/);
-  tempMix = (throttle - phi_ctl + theta_ctl - psi_rate_ctl);
-  motor_timers_out[2] = clamp(tempMix, 900, 1800);
-  //tempMix = (throttle + phi_ctl + theta_ctl + 0/*psi_rate_ctl*/);
-  tempMix = (throttle + phi_ctl + theta_ctl + psi_rate_ctl);
-  motor_timers_out[3] = clamp(tempMix, 900, 1800);
+
+  // Limit the throttle output so that PID controller has room to make
+  // corrections.
+  uint16_t limited_throttle = min(throttle, 1750);
+  
+  //tempMix = (limited_throttle + phi_ctl - theta_ctl - 0);
+  tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
+  motor_timers_out[0] = clamp<uint16_t>(tempMix, 900, 1900);
+  //tempMix = (limited_throttle - phi_ctl - theta_ctl + 0);
+  tempMix = (limited_throttle - phi_ctl - theta_ctl + psi_rate_ctl);
+  motor_timers_out[1] = clamp<uint16_t>(tempMix, 900, 1900);
+  //tempMix = (limited_throttle - phi_ctl + theta_ctl - 0);
+  tempMix = (limited_throttle - phi_ctl + theta_ctl - psi_rate_ctl);
+  motor_timers_out[2] = clamp<uint16_t>(tempMix, 900, 1900);
+  //tempMix = (limited_throttle + phi_ctl + theta_ctl + 0);
+  tempMix = (limited_throttle + phi_ctl + theta_ctl + psi_rate_ctl);
+  motor_timers_out[3] = clamp<uint16_t>(tempMix, 900, 1900);
 }
 
 /////////////////////////////////////////////////
