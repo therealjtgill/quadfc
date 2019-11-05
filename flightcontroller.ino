@@ -184,48 +184,49 @@ void calculateGyroBiases(
 // updateAngleCalculations
 /////////////////////////////////////////////////
 void updateAngleCalculations(
-  const float * phi_rate_bias,
-  const float * theta_rate_bias,
-  const float * psi_rate_bias,
+  const float * phi_degps_bias,
+  const float * theta_degps_bias,
+  const float * psi_degps_bias,
   const float dt,
   float * phi_deg_out,
   float * theta_deg_out,
-  float * psi_rate_degps_out
+  float * psi_degps_out
 )
 {
   static float acc_meas[3]      = {0., 0., 0.};
-  static float gyro_meas_deg[3] = {0., 0., 0.};
-  static float gyro_meas_rad[3] = {0., 0., 0.};
+  static float gyro_meas_degps[3] = {0., 0., 0.};
+  static float gyro_meas_radps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
   static float theta_acc        = 0.;
   static float phi_gyro_rad     = 0.;
   static float theta_gyro_rad   = 0.;
-  const static float alpha      = 0.97;
+  const static float alpha      = 0.9996;
+  const static float beta       = 0.7;
 
   float phi_prev = *phi_deg_out;
   float theta_prev = *theta_deg_out;
-  float psi_rate_prev = *psi_rate_degps_out;
+  float psi_rate_prev = *psi_degps_out;
 
-  getImuData(acc_meas, gyro_meas_deg);
+  getImuData(acc_meas, gyro_meas_degps);
 
-  gyro_meas_rad[0] = gyro_meas_deg[0]*M_PI/180.;
-  gyro_meas_rad[1] = gyro_meas_deg[1]*M_PI/180.;
-  gyro_meas_rad[2] = gyro_meas_deg[2]*M_PI/180.;
+  gyro_meas_radps[0] = (gyro_meas_degps[0] - *phi_degps_bias)*M_PI/180.;
+  gyro_meas_radps[1] = (gyro_meas_degps[1] - *theta_degps_bias)*M_PI/180.;
+  gyro_meas_radps[2] = (gyro_meas_degps[2] - *psi_degps_bias)*M_PI/180.;
 
-  //*psi_rate_degps_out = gyro_meas_deg[2] - *psi_rate_bias;
-  *psi_rate_degps_out = beta*psi_rate_prev + (1 - beta)*(gyro_meas[2] - *psi_rate_bias);
-  propagatePitchRoll(phi_prev, theta_prev, gyro_meas_rad, dt, phi_gyro_rad, theta_gyro_rad);
+  //*psi_degps_out = gyro_meas_deg[2] - *psi_degps_bias;
+  *psi_degps_out = beta*psi_rate_prev + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
+  propagatePitchRoll(phi_prev, theta_prev, gyro_meas_radps, dt, phi_gyro_rad, theta_gyro_rad);
   
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
   if (phi_acc > 180.)
   {
     phi_acc -= 360;
   }
-  //*phi_deg_out = alpha*(phi_prev + (gyro_meas[0] - (*phi_rate_bias))*dt) + (1 - alpha)*(phi_acc);
+  //*phi_deg_out = alpha*(phi_prev + (gyro_meas_degps[0] - (*phi_degps_bias))*dt) + (1 - alpha)*(phi_acc);
   *phi_deg_out = alpha*(phi_prev + phi_gyro_rad*180./M_PI) + (1 - alpha)*(phi_acc);
 
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
-  //*theta_deg_out = alpha*(theta_prev + (gyro_meas[1] - (*theta_rate_bias))*dt) + (1 - alpha)*(theta_acc);
+  //*theta_deg_out = alpha*(theta_prev + (gyro_meas_degps[1] - (*theta_degps_bias))*dt) + (1 - alpha)*(theta_acc);
   *theta_deg_out = alpha*(theta_prev + theta_gyro_rad*180./M_PI) + (1 - alpha)*(theta_acc);
 }
 
@@ -238,7 +239,7 @@ void updateAngleCalculations(
 void calculatePidControls(
   const float * x_phi_deg,
   const float * x_theta_deg,
-  const float * x_psi_rate_degps,
+  const float * x_psi_degps,
   const float * u_phi,
   const float * u_theta,
   const float * u_psi_rate,
@@ -257,14 +258,14 @@ void calculatePidControls(
 
   float x_phi_rad = (*x_phi_deg)*(M_PI/180.);
   float x_theta_rad = (*x_theta_deg)*(M_PI/180.);
-  float x_psi_rate_radps = (*x_psi_rate_degps)*(M_PI/180.);
+  float x_psi_radps = (*x_psi_degps)*(M_PI/180.);
 
   float phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
   //float phi_filtered = phi_pid.filter(x_phi_deg, *u_phi);
   float theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
   //float theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
-  float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_radps, *u_psi_rate);
-  //float psi_rate_filtered = psi_rate_pid.filter(x_psi_rate_degps, *u_psi_rate);
+  float psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, *u_psi_rate);
+  //float psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, *u_psi_rate);
 /*
   *y_phi = static_cast<int16_t>(
     interpolateLinear(
