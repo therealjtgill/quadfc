@@ -58,7 +58,6 @@ void propagatePitchRoll(
    float & roll_out
 )
 {
-   static float R_body_prev[9] = {0., 0., 0., 0., 0., 0., 0., 0., 0.};
    // The last row of the Rodrigues Rotation matrix.
    static float rod2[3] = {0., 0., 0.};
    static float omega_magnitude = 0.;
@@ -68,9 +67,9 @@ void propagatePitchRoll(
    static float tanpitch_d = 0.;
    static float sinroll = 0.;
 
-   // sin(omega_body_magnitude)
+   // sin(omega_body_magnitude*dt)
    static float sa = 0.;
-   // cos(omega_body_magnitude)
+   // cos(omega_body_magnitude*dt)
    static float ca = 0.;
 
    static float sp = 0;
@@ -98,13 +97,13 @@ void propagatePitchRoll(
    omega_global_unit[1] = (omega_body[0]*sp*sr + omega_body[1]*cr - omega_body[2]*sr*cp)/omega_magnitude;
    omega_global_unit[2] = (-1.*omega_body[0]*cp*cr + omega_body[1]*sr + omega_body[2]*cp*cr)/omega_magnitude;
    
-   rod2[0] = -1.*sa*omega_global_unit[1] + (1 - ca)*(omega_global_unit[0]*omega_global_unit[2]);
-   rod2[1] =     sa*omega_global_unit[0] + (1 - ca)*(omega_global_unit[1]*omega_global_unit[2]);
-   rod2[2] =                           1 + (1 - ca)*(omega_global_unit[2]*omega_global_unit[2] - 1);
+   rod2[0] = -1.*sa*omega_global_unit[1]  + (1. - ca)*(omega_global_unit[0]*omega_global_unit[2]);
+   rod2[1] =     sa*omega_global_unit[0]  + (1. - ca)*(omega_global_unit[1]*omega_global_unit[2]);
+   rod2[2] =                           1. + (1. - ca)*(omega_global_unit[2]*omega_global_unit[2] - 1.);
 
-   tanpitch_n = (rod2[2]*cr*sp - rod2[0]*cp - rod2[1]*sr*sp);
-   tanpitch_d = (rod2[0]*sp - rod2[1]*sr*cp + rod2[2]*cp*cr);
-   sinroll = rod2[1]*cr + rod2[2]*sr;
+   tanpitch_n = rod2[2]*cr*sp - rod2[0]*cp - rod2[1]*sr*sp;
+   tanpitch_d = rod2[0]*sp - rod2[1]*sr*cp + rod2[2]*cp*cr;
+   sinroll    = rod2[1]*cr + rod2[2]*sr;
 
    pitch_out = atan2(tanpitch_n, tanpitch_d);
    roll_out = asin(sinroll);
