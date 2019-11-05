@@ -5,7 +5,7 @@
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
-#define PRINTIMUDEGINPUT 0
+#define PRINTIMUDEGINPUT 1
 #define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
@@ -196,14 +196,16 @@ void updateAngleCalculations(
   static float gyro_meas[3] = {0., 0., 0.};
   static float phi_acc      = 0.;
   static float theta_acc    = 0.;
-  const static float alpha  = 0.97;
+  const static float alpha  = 0.9996;
+  const static float beta   = 0.7;
 
   float phi_prev = *phi_deg_out;
   float theta_prev = *theta_deg_out;
+  float psi_rate_prev = *psi_rate_degps_out;
 
   getImuData(acc_meas, gyro_meas);
 
-  *psi_rate_degps_out = gyro_meas[2] - *psi_rate_bias;
+  *psi_rate_degps_out = beta*psi_rate_prev + (1 - beta)*(gyro_meas[2] - *psi_rate_bias);
   
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
   if (phi_acc > 180.)
@@ -238,7 +240,7 @@ void calculatePidControls(
   static PID<float> theta_pid(3.4, 0., 15.0, 0., 0., -100., 100.);
   // Yaw rates can be large, the gains on yaw rate are lowered by a factor of 8 so
   // that the yaw PID output doesn't overwhelm the other PID outputs.
-  static PID<float> psi_rate_pid(3.0/8.0, 0., 0.15/8.0, 0., 0., -100., 100.);
+  static PID<float> psi_rate_pid(0.0/8.0, 0., 0.0/8.0, 0., 0., -100., 100.);
 
   // Output pulse length should be between 1000 and 2000.
 
