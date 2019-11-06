@@ -196,7 +196,7 @@ void updateAngleCalculations(
   static float acc_meas[3]      = {0., 0., 0.};
   static float gyro_meas_degps[3] = {0., 0., 0.};
   static float gyro_filt_degps[3] = {0., 0., 0.};
-  static float gyro_filt_radps[3] = {0., 0., 0.};
+  //static float gyro_filt_radps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
   static float theta_acc        = 0.;
   static float phi_gyro_rad     = 0.;
