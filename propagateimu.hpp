@@ -79,8 +79,10 @@ void propagatePitchRoll(
 
    sp = sin(pitch_in);
    cp = cos(pitch_in);
+   //cp = sqrt(1 - sp*sp);
    sr = sin(roll_in);
    cr = cos(roll_in);
+   //cr = sqrt(1 - sr*sr);
 
    omega_magnitude = sqrt(
       omega_body[0]*omega_body[0] +
@@ -92,10 +94,10 @@ void propagatePitchRoll(
    // delta-alpha is achieved by multiplying angular speed by dt.
    sa = sin(omega_magnitude*dt);
    ca = cos(omega_magnitude*dt);
-
+   
    omega_global_unit[0] = (omega_body[0]*cp + omega_body[2]*sp)/omega_magnitude;
    omega_global_unit[1] = (omega_body[0]*sp*sr + omega_body[1]*cr - omega_body[2]*sr*cp)/omega_magnitude;
-   omega_global_unit[2] = (-1.*omega_body[0]*cp*cr + omega_body[1]*sr + omega_body[2]*cp*cr)/omega_magnitude;
+   omega_global_unit[2] = (-1.*omega_body[0]*sp*cr + omega_body[1]*sr + omega_body[2]*cp*cr)/omega_magnitude;
    
    rod2[0] = -1.*sa*omega_global_unit[1]  + (1. - ca)*(omega_global_unit[0]*omega_global_unit[2]);
    rod2[1] =     sa*omega_global_unit[0]  + (1. - ca)*(omega_global_unit[1]*omega_global_unit[2]);
