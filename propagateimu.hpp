@@ -77,34 +77,34 @@ void propagatePitchRoll(
    static float sr = 0;
    static float cr = 0;
 
-   sp = sin(pitch_in);
-   cp = cos(pitch_in);
-   //cp = sqrt(1 - sp*sp);
-   sr = sin(roll_in);
-   cr = cos(roll_in);
-   //cr = sqrt(1 - sr*sr);
-
    omega_magnitude = sqrt(
       omega_body[0]*omega_body[0] +
       omega_body[1]*omega_body[1] +
       omega_body[2]*omega_body[2]
    );
 
+   sp = sin(pitch_in);
+   cp = cos(pitch_in);
+   sr = sin(roll_in);
+   cr = cos(roll_in);
+
    // The magnitude of omega is the angular speed of rotation. An approximate
    // delta-alpha is achieved by multiplying angular speed by dt.
    sa = sin(omega_magnitude*dt);
    ca = cos(omega_magnitude*dt);
    
+   // Calculate angular velocity in global frame
    omega_global_unit[0] = (omega_body[0]*cp + omega_body[2]*sp)/omega_magnitude;
    omega_global_unit[1] = (omega_body[0]*sp*sr + omega_body[1]*cr - omega_body[2]*sr*cp)/omega_magnitude;
    omega_global_unit[2] = (-1.*omega_body[0]*sp*cr + omega_body[1]*sr + omega_body[2]*cp*cr)/omega_magnitude;
-   
-   rod2[0] = -1.*sa*omega_global_unit[1]  + (1. - ca)*(omega_global_unit[0]*omega_global_unit[2]);
-   rod2[1] =     sa*omega_global_unit[0]  + (1. - ca)*(omega_global_unit[1]*omega_global_unit[2]);
-   rod2[2] =                           1. + (1. - ca)*(omega_global_unit[2]*omega_global_unit[2] - 1.);
 
-   tanpitch_n = rod2[2]*cr*sp - rod2[0]*cp - rod2[1]*sr*sp;
-   tanpitch_d = rod2[0]*sp - rod2[1]*sr*cp + rod2[2]*cp*cr;
+   //Calculate last row of Rodrigues rotation matrix
+   rod2[0] = -1.*sa*omega_global_unit[1] + (1 - ca)*(omega_global_unit[0]*omega_global_unit[2]);
+   rod2[1] =     sa*omega_global_unit[0] + (1 - ca)*(omega_global_unit[1]*omega_global_unit[2]);
+   rod2[2] =                           1 + (1 - ca)*(omega_global_unit[2]*omega_global_unit[2] - 1);
+
+   tanpitch_n = (rod2[2]*cr*sp - rod2[0]*cp - rod2[1]*sr*sp);
+   tanpitch_d = (rod2[0]*sp - rod2[1]*sr*cp + rod2[2]*cp*cr);
    sinroll    = rod2[1]*cr + rod2[2]*sr;
 
    pitch_out = atan2(tanpitch_n, tanpitch_d);

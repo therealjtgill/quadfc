@@ -1,5 +1,5 @@
-#include "pid.hpp"
-#include "propagateimu.hpp"
+#include "../pid.hpp"
+#include "../propagateimu.hpp"
 #include <Wire.h>
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
