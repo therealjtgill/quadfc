@@ -1,6 +1,8 @@
 #include <pid.hpp>
 #include <propagateimu.hpp>
 #include <Wire.h>
+#include <EEPROM.h>
+//#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
@@ -160,15 +162,16 @@ void calculateGyroBiases(
   float * psi_rate_bias_out
 )
 {
-  /*
+#ifdef CALCULATEANDSAVEGYROBIASES
+  
   float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
 
   *phi_rate_bias_out = 0.;
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
-
-  for (unsigned int i = 0; i < 1000; ++i)
+  unsigned int num_trials = 10000;
+  for (unsigned int i = 0; i < num_trials; ++i)
   {
     getImuData(acc, gyro);
     *phi_rate_bias_out += gyro[0];
@@ -176,98 +179,31 @@ void calculateGyroBiases(
     *psi_rate_bias_out += gyro[2];
   }
 
-  *phi_rate_bias_out /= 1000.;
-  *theta_rate_bias_out /= 1000.;
-  *psi_rate_bias_out /= 1000.;
-  */
+  *phi_rate_bias_out /= static_cast<float>(num_trials);
+  *theta_rate_bias_out /= static_cast<float>(num_trials);
+  *psi_rate_bias_out /= static_cast<float>(num_trials);
+  Serial.println("Saved to EEPROM.");
+  int ee_address = 0;
+  EEPROM.put(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *psi_rate_bias_out);
+#else
   // These values are hard-coded after many trials.
-  *phi_rate_bias_out   = 1.193965;
-  *theta_rate_bias_out = -1.902589;
-  *psi_rate_bias_out   = 0.2791016;
+//  *phi_rate_bias_out   = 1.193965;
+//  *theta_rate_bias_out = 1.902589;
+//  *psi_rate_bias_out   = 0.2791016;
+  Serial.println("Read from EEPROM:");
+  int ee_address = 0;
+  EEPROM.get(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *psi_rate_bias_out);
+#endif
 }
-/*
-/////////////////////////////////////////////////
-// updateAngleCalculations
-/////////////////////////////////////////////////
-void updateAngleCalculations(
-  const float * phi_degps_bias,
-  const float * theta_degps_bias,
-  const float * psi_degps_bias,
-  const float dt,
-  float * phi_deg_out,   // Previous measurement of phi, will be updated
-  float * theta_deg_out, // Previous measurement of theta, will be updated
-  float * psi_degps_out  // Previous measurement of psi, will be updated
-)
-{
-  static float acc_meas[3]      = {0., 0., 0.};
-  static float gyro_meas_degps[3] = {0., 0., 0.};
-  static float gyro_filt_degps[3] = {0., 0., 0.};
-  //static float gyro_filt_radps[3] = {0., 0., 0.};
-  static float phi_acc          = 0.;
-  static float theta_acc        = 0.;
-  static float phi_gyro_rad     = 0.;
-  static float theta_gyro_rad   = 0.;
-  const static float alpha      = 0.9996;
-  const static float beta       = 0.7;
 
-  //static float phi_prev_deg = 0.;
-  //static float theta_prev_deg = 0.;
-  //static float psi_prev_degps = 0.;
-
-  static float phi_gyro_temp_deg = 0.;
-  static float theta_gyro_temp_deg = 0.;
-
-  static float sin_omega_z_dt = 0.;
-
-  //phi_prev_deg = *phi_deg_out;
-  //theta_prev_deg = *theta_deg_out;
-  //psi_prev_degps = *psi_degps_out;
-
-  getImuData(acc_meas, gyro_meas_degps);
-
-  gyro_filt_degps[0] = beta*(gyro_filt_degps[0]) + (1 - beta)*(gyro_meas_degps[0] - *phi_degps_bias);
-  gyro_filt_degps[1] = beta*(gyro_filt_degps[1]) + (1 - beta)*(gyro_meas_degps[1] - *theta_degps_bias);
-  gyro_filt_degps[2] = beta*(gyro_filt_degps[2]) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
-
-
-//  gyro_filt_radps[0] = gyro_filt_degps[0]*M_PI/180.;
-//  gyro_filt_radps[1] = gyro_filt_degps[1]*M_PI/180.;
-//  gyro_filt_radps[2] = gyro_filt_degps[2]*M_PI/180.;
-//
-//  propagatePitchRoll(phi_prev_rad, theta_prev_rad, gyro_filt_radps, dt, phi_gyro_rad, theta_gyro_rad);
-
-
-  //*psi_degps_out = beta*(*psi_degps_out) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
-  *psi_degps_out = gyro_filt_degps[2];
-
-  phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
-  if (phi_acc > 180.)
-  {
-    phi_acc -= 360;
-  }
-  theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
-
-  phi_gyro_temp_deg = *phi_deg_out + gyro_filt_degps[0]*dt;
-  theta_gyro_temp_deg = *theta_deg_out + gyro_filt_degps[1]*dt;
-
-  sin_omega_z_dt = sin(gyro_filt_degps[2]*dt*M_PI/180.);
-  phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
-  theta_gyro_temp_deg += phi_gyro_temp_deg*sin_omega_z_dt;
-
-  //Serial.print(phi_gyro_temp_deg); Serial.print(" ");
-  //Serial.print(theta_gyro_temp_deg); Serial.println();
-
-  //*phi_deg_out = alpha*(*phi_deg_out + (gyro_meas_degps[0] - (*phi_degps_bias))*dt) + (1 - alpha)*(phi_acc);
-  //*phi_deg_out = alpha*(phi_gyro_rad*180./M_PI) + (1 - alpha)*(phi_acc);
-  //*phi_deg_out = phi_gyro_rad*180./M_PI;
-  *phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
-
-  //*theta_deg_out = alpha*(*theta_deg_out + (gyro_meas_degps[1] - (*theta_degps_bias))*dt) + (1 - alpha)*(theta_acc);
-  //*theta_deg_out = alpha*(theta_gyro_rad*180./M_PI) + (1 - alpha)*(theta_acc);
-  //*theta_deg_out = theta_gyro_rad*180./M_PI;
-  *theta_deg_out = alpha*theta_gyro_temp_deg + (1 - alpha)*theta_acc;
-}
-*/
 /////////////////////////////////////////////////
 // calculatePidControls
 /////////////////////////////////////////////////
@@ -304,35 +240,7 @@ void calculatePidControls(
   //float theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
   float psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, *u_psi_rate);
   //float psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, *u_psi_rate);
-/*
-  *y_phi = static_cast<int16_t>(
-    interpolateLinear(
-      -10.5,
-      10.5,
-      -400.,
-      400.,
-      phi_filtered
-    )
-  );
-  *y_theta = static_cast<int16_t>(
-    interpolateLinear(
-      -10.5,
-      10.5,
-      -400.,
-      400.,
-      theta_filtered
-    )
-  );
-  *y_psi_rate = static_cast<int16_t>(
-    interpolateLinear(
-      -10.5,
-      10.5,
-      -400.,
-      400.,
-      psi_rate_filtered
-    )
-  );
-*/
+
   *y_phi = static_cast<int16_t>(
     clamp<float>(
       37*phi_filtered,
@@ -372,10 +280,13 @@ void rxPulsesToSetPoints(
   float * u_psi_rate_out
 )
 {
+  // After tinkering with the IMU, I decided that I don't want the drone to be able to
+  // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array. size should always be 4.
-  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  //*u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
   //*u_phi_out      = interpolateLinear(1000, 2000, -45., 45., rx_pulses[1]);
-  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
+  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
   //*u_theta_out    = interpolateLinear(1000, 2000, -45., 45., rx_pulses[0]);
   *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
   //*u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
