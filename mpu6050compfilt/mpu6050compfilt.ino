@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <math.h>
 #include <propagateimu.hpp>
+#include <EEPROM.h>
+//#define CALCULATEANDSAVEGYROBIASES
 
 void setup(void)
 {
@@ -58,6 +60,10 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   for (i = 0; i < 3; ++i)
   {
     gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
+    if (i == 1)
+    {
+      gyro_meas_out[i] *= -1;
+    }
   }
 }
 
@@ -70,7 +76,8 @@ void calculateGyroBiases(
   float * psi_rate_bias_out
 )
 {
-  /*
+#ifdef CALCULATEANDSAVEGYROBIASES
+  
   float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
 
@@ -89,11 +96,26 @@ void calculateGyroBiases(
   *phi_rate_bias_out /= static_cast<float>(num_trials);
   *theta_rate_bias_out /= static_cast<float>(num_trials);
   *psi_rate_bias_out /= static_cast<float>(num_trials);
-  */
+  Serial.println("Saved to EEPROM.");
+  int ee_address = 0;
+  EEPROM.put(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *psi_rate_bias_out);
+#else
   // These values are hard-coded after many trials.
-  *phi_rate_bias_out   = 1.193965;
-  *theta_rate_bias_out = 1.902589;
-  *psi_rate_bias_out   = 0.2791016;
+//  *phi_rate_bias_out   = 1.193965;
+//  *theta_rate_bias_out = 1.902589;
+//  *psi_rate_bias_out   = 0.2791016;
+  Serial.println("Read from EEPROM:");
+  int ee_address = 0;
+  EEPROM.get(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *psi_rate_bias_out);
+#endif
 }
 
 void loop(void)
@@ -149,9 +171,9 @@ void loop(void)
     calculateGyroBiases(&phi_gyr_bias, &theta_gyr_bias, &psi_gyr_bias);
     initialized = true;
     t = micros();
-//    Serial.print(phi_gyr_bias, 9); Serial.print(" ");
-//    Serial.print(theta_gyr_bias, 9); Serial.print(" ");
-//    Serial.print(psi_gyr_bias, 9); Serial.println(" ");
+    Serial.print(phi_gyr_bias, 9); Serial.print(" ");
+    Serial.print(theta_gyr_bias, 9); Serial.print(" ");
+    Serial.print(psi_gyr_bias, 9); Serial.println(" ");
   }
 
   dt = (micros() - t)/1e6;
