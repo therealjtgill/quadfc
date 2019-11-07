@@ -61,25 +61,39 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   }
 }
 
-void calculateGyroBiases(float * phi_bias, float * theta_bias, float * psi_bias)
+/////////////////////////////////////////////////
+// calculateGyroBiases
+/////////////////////////////////////////////////
+void calculateGyroBiases(
+  float * phi_rate_bias_out,
+  float * theta_rate_bias_out,
+  float * psi_rate_bias_out
+)
 {
-  float acc[3] = {0., 0., 0.};
+  /*
+  float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
 
-  *phi_bias = 0.;
-  *theta_bias = 0.;
-  *psi_bias = 0.;
-  for (unsigned int i = 0; i < 1000; ++i)
+  *phi_rate_bias_out = 0.;
+  *theta_rate_bias_out = 0.;
+  *psi_rate_bias_out = 0.;
+  unsigned int num_trials = 10000;
+  for (unsigned int i = 0; i < num_trials; ++i)
   {
     getImuData(acc, gyro);
-    *phi_bias += gyro[0];
-    *theta_bias += gyro[1];
-    *psi_bias += gyro[2];
+    *phi_rate_bias_out += gyro[0];
+    *theta_rate_bias_out += gyro[1];
+    *psi_rate_bias_out += gyro[2];
   }
 
-  *phi_bias /= 1000.;
-  *theta_bias /= 1000.;
-  *psi_bias /= 1000.;
+  *phi_rate_bias_out /= static_cast<float>(num_trials);
+  *theta_rate_bias_out /= static_cast<float>(num_trials);
+  *psi_rate_bias_out /= static_cast<float>(num_trials);
+  */
+  // These values are hard-coded after many trials.
+  *phi_rate_bias_out   = 1.193965;
+  *theta_rate_bias_out = 1.902589;
+  *psi_rate_bias_out   = 0.2791016;
 }
 
 void loop(void)
@@ -133,8 +147,11 @@ void loop(void)
   if (!initialized)
   {
     calculateGyroBiases(&phi_gyr_bias, &theta_gyr_bias, &psi_gyr_bias);
-    initialized = true;
+    //initialized = true;
     t = micros();
+    Serial.print(phi_gyr_bias, 9); Serial.print(" ");
+    Serial.print(theta_gyr_bias, 9); Serial.print(" ");
+    Serial.print(psi_gyr_bias, 9); Serial.println(" ");
   }
 
   dt = (micros() - t)/1e6;
@@ -190,21 +207,20 @@ void loop(void)
   //Serial.print(phi_acc);
   //Serial.print(" ");
   //Serial.print(phi_gyr);
-  Serial.print(theta);
+  //Serial.print(theta);
   //Serial.print(gyro[0] - phi_gyr_bias);
-  Serial.print(" ");
+  //Serial.print(" ");
   //Serial.print(gyro[1] - theta_gyr_bias);
   //Serial.print(theta_acc);
   //Serial.print(theta_gyr);
-  Serial.print(phi);
+  //Serial.print(phi);
   //Serial.print(" ");
   //Serial.print(M_PI/180.);
   //Serial.print(psi_rate);
   //Serial.print(" ");
-  Serial.println("");
+  //Serial.println("");
   
   //Serial.println(micros() - t);
-  while ((micros() - t) < 4000);
+  //while ((micros() - t) < 4000);
   //Serial.println(micros() - t);
 }
-

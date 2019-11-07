@@ -160,6 +160,7 @@ void calculateGyroBiases(
   float * psi_rate_bias_out
 )
 {
+  /*
   float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
 
@@ -178,6 +179,11 @@ void calculateGyroBiases(
   *phi_rate_bias_out /= 1000.;
   *theta_rate_bias_out /= 1000.;
   *psi_rate_bias_out /= 1000.;
+  */
+  // These values are hard-coded after many trials.
+  *phi_rate_bias_out   = 1.193965;
+  *theta_rate_bias_out = 1.902589;
+  *psi_rate_bias_out   = 0.2791016;
 }
 
 /////////////////////////////////////////////////
