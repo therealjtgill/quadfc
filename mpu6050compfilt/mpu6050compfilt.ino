@@ -147,11 +147,11 @@ void loop(void)
   if (!initialized)
   {
     calculateGyroBiases(&phi_gyr_bias, &theta_gyr_bias, &psi_gyr_bias);
-    //initialized = true;
+    initialized = true;
     t = micros();
-    Serial.print(phi_gyr_bias, 9); Serial.print(" ");
-    Serial.print(theta_gyr_bias, 9); Serial.print(" ");
-    Serial.print(psi_gyr_bias, 9); Serial.println(" ");
+//    Serial.print(phi_gyr_bias, 9); Serial.print(" ");
+//    Serial.print(theta_gyr_bias, 9); Serial.print(" ");
+//    Serial.print(psi_gyr_bias, 9); Serial.println(" ");
   }
 
   dt = (micros() - t)/1e6;
@@ -221,6 +221,6 @@ void loop(void)
   //Serial.println("");
   
   //Serial.println(micros() - t);
-  //while ((micros() - t) < 4000);
+  while ((micros() - t) < 4000);
   //Serial.println(micros() - t);
 }
