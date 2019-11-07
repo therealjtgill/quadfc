@@ -182,7 +182,7 @@ void calculateGyroBiases(
   */
   // These values are hard-coded after many trials.
   *phi_rate_bias_out   = 1.193965;
-  *theta_rate_bias_out = 1.902589;
+  *theta_rate_bias_out = -1.902589;
   *psi_rate_bias_out   = 0.2791016;
 }
 
@@ -262,10 +262,13 @@ void rxPulsesToSetPoints(
   float * u_psi_rate_out
 )
 {
+  // After tinkering with the IMU, I decided that I don't want the drone to be able to
+  // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array. size should always be 4.
-  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  //*u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
   //*u_phi_out      = interpolateLinear(1000, 2000, -45., 45., rx_pulses[1]);
-  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[0]);
+  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
   //*u_theta_out    = interpolateLinear(1000, 2000, -45., 45., rx_pulses[0]);
   *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
   //*u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
