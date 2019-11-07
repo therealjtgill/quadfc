@@ -1,5 +1,5 @@
 #include <pid.hpp>
-//#include <propagateimu.hpp>
+#include <propagateimu.hpp>
 #include <Wire.h>
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
@@ -179,7 +179,7 @@ void calculateGyroBiases(
   *theta_rate_bias_out /= 1000.;
   *psi_rate_bias_out /= 1000.;
 }
-
+/*
 /////////////////////////////////////////////////
 // updateAngleCalculations
 /////////////////////////////////////////////////
@@ -261,7 +261,7 @@ void updateAngleCalculations(
   //*theta_deg_out = theta_gyro_rad*180./M_PI;
   *theta_deg_out = alpha*theta_gyro_temp_deg + (1 - alpha)*theta_acc;
 }
-
+*/
 /////////////////////////////////////////////////
 // calculatePidControls
 /////////////////////////////////////////////////
