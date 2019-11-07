@@ -1,19 +1,19 @@
-#include "../pid.hpp"
-#include "../propagateimu.hpp"
+#include "C:\Users\jtgil\Documents\Quadcopter\flightcontroller\pid.hpp"
+#include "C:\Users\jtgil\Documents\Quadcopter\flightcontroller\propagateimu.hpp"
 #include <Wire.h>
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
-#define PRINTIMUDEGINPUT 1
+#define PRINTIMUDEGINPUT 0
 #define PRINTIMUGYROUPDATE 0
 #define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
-#define PRINTCYCLELENGTH 0
+#define PRINTCYCLELENGTH 1
 
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -42,8 +42,9 @@ void setup() {
   DDRD |= B00111100;
 
   Wire.begin();
+  TWBR = 12;
 
-  Serial.println("This text should display");
+  //Serial.println("This text should display");
   delay(800);
 
   Wire.beginTransmission(0x68);
@@ -232,7 +233,6 @@ void updateAngleCalculations(
   propagatePitchRoll(phi_prev_rad, theta_prev_rad, gyro_filt_radps, dt, phi_gyro_rad, theta_gyro_rad);
 */
 
-  //*psi_degps_out = beta*(*psi_degps_out) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
   *psi_degps_out = gyro_filt_degps[2];
 
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
@@ -249,14 +249,12 @@ void updateAngleCalculations(
   phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
   theta_gyro_temp_deg += phi_gyro_temp_deg*sin_omega_z_dt;
 
-  //*phi_deg_out = alpha*(*phi_deg_out + (gyro_meas_degps[0] - (*phi_degps_bias))*dt) + (1 - alpha)*(phi_acc);
+  //*phi_deg_out = alpha*(*phi_deg_out + gyro_filt_degps[0]*dt) + (1 - alpha)*(phi_acc);
   //*phi_deg_out = alpha*(phi_gyro_rad*180./M_PI) + (1 - alpha)*(phi_acc);
-  //*phi_deg_out = phi_gyro_rad*180./M_PI;
   *phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
 
-  //*theta_deg_out = alpha*(*theta_deg_out + (gyro_meas_degps[1] - (*theta_degps_bias))*dt) + (1 - alpha)*(theta_acc);
+  //*theta_deg_out = alpha*(*theta_deg_out + gyro_filt_degps[1]*dt) + (1 - alpha)*(theta_acc);
   //*theta_deg_out = alpha*(theta_gyro_rad*180./M_PI) + (1 - alpha)*(theta_acc);
-  //*theta_deg_out = theta_gyro_rad*180./M_PI;
   *theta_deg_out = alpha*theta_gyro_temp_deg + (1 - alpha)*theta_acc;
 }
 
@@ -329,10 +327,10 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
-  motor_pulses[0] = 0;//rx_pulses[2];
-  motor_pulses[1] = 0;//rx_pulses[2];
-  motor_pulses[2] = 0;//rx_pulses[2];
-  motor_pulses[3] = 0;//rx_pulses[2];
+  motor_pulses[0] = 2000;//rx_pulses[2];
+  motor_pulses[1] = 2000;//rx_pulses[2];
+  motor_pulses[2] = 2000;//rx_pulses[2];
+  motor_pulses[3] = 2000;//rx_pulses[2];
   
   if (PRINTMOTORPULSES)
   {
@@ -383,7 +381,7 @@ void loop() {
   }
 
   // Pause for the rest of the 4000us loop.
-  //while (cycleStartTime + CYCLELEN > micros());
+  while (cycleStartTime + CYCLELEN > micros());
 
   if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS)
   {

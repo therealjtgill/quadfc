@@ -1,5 +1,5 @@
-#include "../pid.hpp"
-#include "../propagateimu.hpp"
+#include "C:\Users\jtgil\Documents\Quadcopter\flightcontroller\pid.hpp"
+//#include "C:\Users\jtgil\Documents\Quadcopter\flightcontroller\propagateimu.hpp"
 #include <Wire.h>
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
@@ -41,6 +41,7 @@ void setup() {
   DDRD |= B00111100;
 
   Wire.begin();
+  TWBR = 12; // Some shit I saw on forum.arduino.cc/index.php?topic=58031.0
 
   Serial.println("This text should display");
   delay(800);
@@ -122,13 +123,14 @@ float interpolateLinear(
 void getImuData(float * acc_meas_out, float * gyro_meas_out)
 {
   unsigned int i = 0;
+
   Wire.beginTransmission(0x68);
   Wire.write(0x3b);
   Wire.endTransmission(true);
   Wire.requestFrom(0x68, 14);
 
   while(Wire.available() < 8);
-  
+
   for (i = 0; i < 3; ++i)
   {
     acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
@@ -141,8 +143,6 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    // The factor of 400 exists to make numerical integration of angular rates
-    // from gyro roughly equal to accelerometer measurements (see mpu6050compfilt.ino).
     gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
     if (i == 1)
     {
@@ -247,6 +247,9 @@ void updateAngleCalculations(
   sin_omega_z_dt = sin(gyro_filt_degps[2]*dt*M_PI/180.);
   phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
   theta_gyro_temp_deg += phi_gyro_temp_deg*sin_omega_z_dt;
+
+  //Serial.print(phi_gyro_temp_deg); Serial.print(" ");
+  //Serial.print(theta_gyro_temp_deg); Serial.println();
 
   //*phi_deg_out = alpha*(*phi_deg_out + (gyro_meas_degps[0] - (*phi_degps_bias))*dt) + (1 - alpha)*(phi_acc);
   //*phi_deg_out = alpha*(phi_gyro_rad*180./M_PI) + (1 - alpha)*(phi_acc);
@@ -443,7 +446,7 @@ void loop() {
     initialized = true;
     t = micros();
   }
-  
+
   if (PRINTCYCLELENGTH)
   {
     Serial.print(t - cycleStartTime); Serial.print(" ");
@@ -451,6 +454,7 @@ void loop() {
 
   dt = (t - cycleStartTime)/1e6;
   cycleStartTime = micros();
+
   updateAngleCalculations(
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &psi_rate_meas
@@ -519,6 +523,10 @@ void loop() {
   PORTD |= B00111100;
 
   motorStartTime = micros();
+  motor_pulses[0] = rx_pulses[2];
+  motor_pulses[1] = rx_pulses[2];
+  motor_pulses[2] = rx_pulses[2];
+  motor_pulses[3] = rx_pulses[2];
 
   motor_timers[0] = motor_pulses[0] + motorStartTime;
   motor_timers[1] = motor_pulses[1] + motorStartTime;
