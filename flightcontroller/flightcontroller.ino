@@ -1,6 +1,8 @@
 #include <pid.hpp>
 #include <propagateimu.hpp>
 #include <Wire.h>
+#include <EEPROM.h>
+//#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
@@ -160,15 +162,16 @@ void calculateGyroBiases(
   float * psi_rate_bias_out
 )
 {
-  /*
+#ifdef CALCULATEANDSAVEGYROBIASES
+  
   float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
 
   *phi_rate_bias_out = 0.;
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
-
-  for (unsigned int i = 0; i < 1000; ++i)
+  unsigned int num_trials = 10000;
+  for (unsigned int i = 0; i < num_trials; ++i)
   {
     getImuData(acc, gyro);
     *phi_rate_bias_out += gyro[0];
@@ -176,14 +179,29 @@ void calculateGyroBiases(
     *psi_rate_bias_out += gyro[2];
   }
 
-  *phi_rate_bias_out /= 1000.;
-  *theta_rate_bias_out /= 1000.;
-  *psi_rate_bias_out /= 1000.;
-  */
+  *phi_rate_bias_out /= static_cast<float>(num_trials);
+  *theta_rate_bias_out /= static_cast<float>(num_trials);
+  *psi_rate_bias_out /= static_cast<float>(num_trials);
+  Serial.println("Saved to EEPROM.");
+  int ee_address = 0;
+  EEPROM.put(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *psi_rate_bias_out);
+#else
   // These values are hard-coded after many trials.
-  *phi_rate_bias_out   = 1.193965;
-  *theta_rate_bias_out = -1.902589;
-  *psi_rate_bias_out   = 0.2791016;
+//  *phi_rate_bias_out   = 1.193965;
+//  *theta_rate_bias_out = 1.902589;
+//  *psi_rate_bias_out   = 0.2791016;
+  Serial.println("Read from EEPROM:");
+  int ee_address = 0;
+  EEPROM.get(ee_address, *phi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *theta_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *psi_rate_bias_out);
+#endif
 }
 
 /////////////////////////////////////////////////
