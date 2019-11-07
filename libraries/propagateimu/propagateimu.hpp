@@ -70,7 +70,7 @@ void propagatePitchRoll(
    roll_out = asin(sinroll);
 }
 
-#ifndef USETRAPEZOIDAL
+#ifdef USETRAPEZOIDAL
 /////////////////////////////////////////////////
 // updateAngleCalculations
 /////////////////////////////////////////////////
@@ -129,10 +129,10 @@ void updateAngleCalculations(
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
 
   // Calculate phi and theta according to gyro output.
-  //phi_gyro_temp_deg = phi_prev_deg + gyro_filt_degps[0]*dt;
-  phi_gyro_temp_deg = phi_prev_deg + gyro_prev_degps[0]*dt + 0.5*dt*(gyro_filt_degps[0] - gyro_prev_degps[0]);
-  //theta_gyro_temp_deg = theta_prev_deg + gyro_filt_degps[1]*dt;
-  theta_gyro_temp_deg = theta_prev_deg + gyro_prev_degps[1]*dt + 0.5*dt*(gyro_filt_degps[1] - gyro_prev_degps[1]);
+  phi_gyro_temp_deg = phi_prev_deg + gyro_filt_degps[0]*dt;
+  //phi_gyro_temp_deg = phi_prev_deg + gyro_prev_degps[0]*dt + 0.5*dt*(gyro_filt_degps[0] - gyro_prev_degps[0]);
+  theta_gyro_temp_deg = theta_prev_deg + gyro_filt_degps[1]*dt;
+  //theta_gyro_temp_deg = theta_prev_deg + gyro_prev_degps[1]*dt + 0.5*dt*(gyro_filt_degps[1] - gyro_prev_degps[1]);
 
   sin_omega_z_dt = sin(gyro_filt_degps[2]*dt*M_PI/180.);
   phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
@@ -161,6 +161,7 @@ void updateAngleCalculations(
   float * psi_degps_out  // Previous measurement of psi, will be updated
 )
 {
+
   static float acc_meas[3]      = {0., 0., 0.};
   static float gyro_meas_degps[3] = {0., 0., 0.};
   static float gyro_filt_degps[3] = {0., 0., 0.};
