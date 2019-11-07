@@ -223,13 +223,13 @@ void updateAngleCalculations(
   gyro_filt_degps[1] = beta*(gyro_filt_degps[1]) + (1 - beta)*(gyro_meas_degps[1] - *theta_degps_bias);
   gyro_filt_degps[2] = beta*(gyro_filt_degps[2]) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
 
-/*
-  gyro_filt_radps[0] = gyro_filt_degps[0]*M_PI/180.;
-  gyro_filt_radps[1] = gyro_filt_degps[1]*M_PI/180.;
-  gyro_filt_radps[2] = gyro_filt_degps[2]*M_PI/180.;
 
-  propagatePitchRoll(phi_prev_rad, theta_prev_rad, gyro_filt_radps, dt, phi_gyro_rad, theta_gyro_rad);
-*/
+//  gyro_filt_radps[0] = gyro_filt_degps[0]*M_PI/180.;
+//  gyro_filt_radps[1] = gyro_filt_degps[1]*M_PI/180.;
+//  gyro_filt_radps[2] = gyro_filt_degps[2]*M_PI/180.;
+//
+//  propagatePitchRoll(phi_prev_rad, theta_prev_rad, gyro_filt_radps, dt, phi_gyro_rad, theta_gyro_rad);
+
 
   //*psi_degps_out = beta*(*psi_degps_out) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
   *psi_degps_out = gyro_filt_degps[2];
@@ -629,4 +629,3 @@ ISR(PCINT0_vect)
     rx_pulses[3] = current_time - rx_timers[3];
   }
 }
-

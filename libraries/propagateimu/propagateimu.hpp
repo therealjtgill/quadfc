@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdint.h>
 
+void getImuData(float * acc_meas_out, float * gyro_meas_out);
+
 // Helper to convert from 2d array indices to linear array indices.
 uint8_t ind(
    const uint8_t & i,
@@ -163,6 +165,12 @@ void updateAngleCalculations(
     phi_acc -= 360;
   }
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
+  //phi_acc = atan2(acc_meas[1], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
+  //theta_acc = atan2(-1.*acc_meas[0], acc_meas[2])*180./M_PI + 180;
+  //if (theta_acc > 180.)
+  //{
+  //  theta_acc -= 360;
+  //}
 
   phi_gyro_temp_deg = *phi_deg_out + gyro_filt_degps[0]*dt;
   theta_gyro_temp_deg = *theta_deg_out + gyro_filt_degps[1]*dt;
