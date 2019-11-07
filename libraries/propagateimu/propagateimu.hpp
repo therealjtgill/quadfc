@@ -4,51 +4,8 @@
 #include <math.h>
 #include <stdint.h>
 
+// Forward declaration; actual definition is in *.ino file.
 void getImuData(float * acc_meas_out, float * gyro_meas_out);
-
-// Helper to convert from 2d array indices to linear array indices.
-uint8_t ind(
-   const uint8_t & i,
-   const uint8_t & j
-)
-{
-   static uint8_t max_i = 2;
-   static uint8_t max_j = 2;
-   return i*max_i + j;
-}
-
-// Size of R is always 9.
-void pitchRollMatrix(
-   const float & pitch,
-   const float & roll,
-   float * R
-)
-{
-   static float sp = 0;
-   static float cp = 0;
-   static float sr = 0;
-   static float cr = 0;
-
-   sp = sin(pitch);
-   cp = cos(pitch);
-   sr = sin(roll);
-   cr = cos(roll);
-   R[ind(0, 0)] = cp;         R[ind(0, 1)] = 0;       R[ind(0, 2)] = sp;
-   R[ind(1, 0)] = sr*sp;      R[ind(1, 1)] = cr;      R[ind(1, 2)] = -1.*sr*cp;
-   R[ind(2, 0)] = -1.*cr*sp;  R[ind(2, 1)] = sr;      R[ind(2, 2)] = cp*cr;
-}
-
-// Only need the bottom row of this matrix; excluding implementation in favor
-// of optimization.
-//void rodriguesRotationMatrix() {}
-
-// Size of R is always 9. This function may be superfluous given the
-// implementation in propagatePitchRoll.
-void extractPitchRoll(const float * R, float & pitch, float & roll)
-{
-   pitch = atan2(-1.*R[ind(2, 0)], R[ind(2, 2)]);
-   roll  = asin(R[ind(2, 1)]);
-}
 
 // omega_body is an array with three elements.
 void propagatePitchRoll(
@@ -113,7 +70,6 @@ void propagatePitchRoll(
    roll_out = asin(sinroll);
 }
 
-
 /////////////////////////////////////////////////
 // updateAngleCalculations
 /////////////////////////////////////////////////
@@ -130,17 +86,21 @@ void updateAngleCalculations(
   static float acc_meas[3]      = {0., 0., 0.};
   static float gyro_meas_degps[3] = {0., 0., 0.};
   static float gyro_filt_degps[3] = {0., 0., 0.};
-  //static float gyro_filt_radps[3] = {0., 0., 0.};
+  static float gyro_prev_degps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
   static float theta_acc        = 0.;
-  static float phi_gyro_rad     = 0.;
   static float theta_gyro_rad   = 0.;
   const static float alpha      = 0.9996;
   const static float beta       = 0.7;
 
   static float phi_prev_deg = 0.;
   static float theta_prev_deg = 0.;
-  static float psi_prev_degps = 0.;
+  //static float psi_prev_degps = 0.;
+
+  // Keep the previous measurements of phi_dot and theta_dot for trapezoidal
+  // integration.
+  static float phi_prev_degps = 0.;
+  static float theta_prev_degps = 0.;
 
   static float phi_gyro_temp_deg = 0.;
   static float theta_gyro_temp_deg = 0.;
@@ -149,7 +109,7 @@ void updateAngleCalculations(
 
   phi_prev_deg = *phi_deg_out;
   theta_prev_deg = *theta_deg_out;
-  psi_prev_degps = *psi_degps_out;
+  //psi_prev_degps = *psi_degps_out;
 
   getImuData(acc_meas, gyro_meas_degps);
 
@@ -159,6 +119,7 @@ void updateAngleCalculations(
 
   *psi_degps_out = gyro_filt_degps[2];
 
+  // Calculate phi and theta according to accelerometer output.
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;
   if (phi_acc > 180.)
   {
@@ -166,16 +127,23 @@ void updateAngleCalculations(
   }
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
 
-  phi_gyro_temp_deg = *phi_deg_out + gyro_filt_degps[0]*dt;
-  theta_gyro_temp_deg = *theta_deg_out + gyro_filt_degps[1]*dt;
+  // Calculate phi and theta according to gyro output.
+  //phi_gyro_temp_deg = phi_prev_deg + gyro_filt_degps[0]*dt;
+  phi_gyro_temp_deg = phi_prev_deg + gyro_prev_degps[0]*dt + 0.5*dt*(gyro_filt_degps[0] - gyro_prev_degps[0]);
+  //theta_gyro_temp_deg = theta_prev_deg + gyro_filt_degps[1]*dt;
+  theta_gyro_temp_deg = theta_prev_deg + gyro_prev_degps[1]*dt + 0.5*dt*(gyro_filt_degps[1] - gyro_prev_degps[1]);
 
   sin_omega_z_dt = sin(gyro_filt_degps[2]*dt*M_PI/180.);
   phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
   theta_gyro_temp_deg += phi_gyro_temp_deg*sin_omega_z_dt;
 
+  // Complementary filter of gyro and accelerometer.
   *phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
-
   *theta_deg_out = alpha*theta_gyro_temp_deg + (1 - alpha)*theta_acc;
+
+  gyro_prev_degps[0] = gyro_filt_degps[0];
+  gyro_prev_degps[1] = gyro_filt_degps[1];
+  gyro_prev_degps[2] = gyro_filt_degps[2];
 }
 
 
