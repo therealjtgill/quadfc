@@ -4,6 +4,8 @@
 #include <math.h>
 #include <stdint.h>
 
+void getImuData(float * acc_meas_out, float * gyro_meas_out);
+
 // Helper to convert from 2d array indices to linear array indices.
 uint8_t ind(
    const uint8_t & i,
