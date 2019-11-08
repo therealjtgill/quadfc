@@ -2,6 +2,7 @@
 #include <propagateimu.hpp>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <remotestartup.hpp>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
@@ -91,6 +92,9 @@ void setup() {
     rx_pulses[i] = 1000;
     rx_timers[i] = 1000;
   }
+
+  // Use built-in LED to signal safe/not-safe status.
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 /////////////////////////////////////////////////
@@ -355,6 +359,8 @@ void loop() {
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
   static unsigned long loopTime = 0;
+  static OperationMode flightMode = UNINITIALIZED;
+  static OperationMode newFlightMode = UNINITIALIZED;
 
   if (!initialized)
   {
@@ -362,6 +368,24 @@ void loop() {
     loopTime = 0;
     initialized = true;
     t = micros();
+  }
+
+  newFlightMode = checkOperationMode(rx_pulses, flightMode);
+  if (newFlightMode != flightMode)
+  {
+    switch(newFlightMode)
+    {
+      case FLIGHT:
+        Serial.println("FLIGHT");
+        break;
+      case NOFLIGHT:
+        Serial.println("NO FLIGHT, NEIN");
+        break;
+      case UNINITIALIZED:
+        Serial.println("UNINITIALIZED");
+        break;
+    }
+    flightMode = newFlightMode;
   }
 
   if (PRINTCYCLELENGTH)
@@ -402,14 +426,6 @@ void loop() {
     Serial.print(psi_rate_set); Serial.print(" ");
   }
 
-  if (PRINTRXPULSES)
-  {
-    Serial.print(rx_pulses[0]); Serial.print(" ");
-    Serial.print(rx_pulses[1]); Serial.print(" ");
-    Serial.print(rx_pulses[2]); Serial.print(" ");
-    Serial.print(rx_pulses[3]); Serial.print(" ");
-  }
-
   calculatePidControls(
     &phi_meas, &theta_meas, &psi_rate_meas,
     &phi_set, &theta_set, &psi_rate_set,
@@ -440,11 +456,21 @@ void loop() {
   PORTD |= B00111100;
 
   motorStartTime = micros();
-  motor_pulses[0] = rx_pulses[2];
-  motor_pulses[1] = rx_pulses[2];
-  motor_pulses[2] = rx_pulses[2];
-  motor_pulses[3] = rx_pulses[2];
-
+  if (flightMode == FLIGHT)
+  {
+    motor_pulses[0] = rx_pulses[2];
+    motor_pulses[1] = rx_pulses[2];
+    motor_pulses[2] = rx_pulses[2];
+    motor_pulses[3] = rx_pulses[2];
+  }
+  else
+  {
+    motor_pulses[0] = 0;
+    motor_pulses[1] = 0;
+    motor_pulses[2] = 0;
+    motor_pulses[3] = 0;
+  }
+  
   motor_timers[0] = motor_pulses[0] + motorStartTime;
   motor_timers[1] = motor_pulses[1] + motorStartTime;
   motor_timers[2] = motor_pulses[2] + motorStartTime;
