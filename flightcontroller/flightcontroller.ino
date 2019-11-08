@@ -95,6 +95,7 @@ void setup() {
 
   // Use built-in LED to signal safe/not-safe status.
   pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
 }
 
 /////////////////////////////////////////////////
@@ -379,12 +380,15 @@ void loop() {
     switch(newFlightMode)
     {
       case FLIGHT:
+        digitalWrite(LED_BUILTIN, LOW);
         Serial.println("FLIGHT");
         break;
       case NOFLIGHT:
+        digitalWrite(LED_BUILTIN, HIGH);
         Serial.println("NO FLIGHT, NEIN");
         break;
       case UNINITIALIZED:
+        digitalWrite(LED_BUILTIN, HIGH);
         Serial.println("UNINITIALIZED");
         break;
     }
