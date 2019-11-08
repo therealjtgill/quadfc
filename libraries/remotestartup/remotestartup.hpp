@@ -3,8 +3,16 @@
 
 typedef enum OperationMode {UNINITIALIZED, FLIGHT, NOFLIGHT} OperationMode;
 
-OperationMode checkOperationMode(const int * motorPulses, const OperationMode & currentMode)
+OperationMode checkOperationMode(
+   const int * motorPulses,
+   const OperationMode & currentMode,
+   const double & timeSinceModeChange_ms
+)
 {
+   if (timeSinceModeChange_ms < 750)
+   {
+      return currentMode;
+   }
    if (currentMode == FLIGHT || currentMode == NOFLIGHT)
    {
       if (

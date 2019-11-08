@@ -361,6 +361,8 @@ void loop() {
   static unsigned long loopTime = 0;
   static OperationMode flightMode = UNINITIALIZED;
   static OperationMode newFlightMode = UNINITIALIZED;
+  static double modeTimeElapsed = 0.;
+  static double modeStartTime = 0.;
 
   if (!initialized)
   {
@@ -370,7 +372,8 @@ void loop() {
     t = micros();
   }
 
-  newFlightMode = checkOperationMode(rx_pulses, flightMode);
+  modeTimeElapsed = millis() - modeStartTime;
+  newFlightMode = checkOperationMode(rx_pulses, flightMode, modeTimeElapsed);
   if (newFlightMode != flightMode)
   {
     switch(newFlightMode)
@@ -386,6 +389,7 @@ void loop() {
         break;
     }
     flightMode = newFlightMode;
+    modeStartTime = millis();
   }
 
   if (PRINTCYCLELENGTH)
