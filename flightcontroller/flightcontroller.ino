@@ -464,14 +464,7 @@ void loop() {
   PORTD |= B00111100;
 
   motorStartTime = micros();
-  if (flightMode == FLIGHT)
-  {
-    motor_pulses[0] = rx_pulses[2];
-    motor_pulses[1] = rx_pulses[2];
-    motor_pulses[2] = rx_pulses[2];
-    motor_pulses[3] = rx_pulses[2];
-  }
-  else
+  if (flightMode != FLIGHT)
   {
     motor_pulses[0] = 0;
     motor_pulses[1] = 0;
