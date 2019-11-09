@@ -1,5 +1,6 @@
 #include <pid.hpp>
 #include <propagateimu.hpp>
+#include <remotestartup.hpp>
 #include <Wire.h>
 #include <EEPROM.h>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
