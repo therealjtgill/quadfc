@@ -10,10 +10,9 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 0
+#define PRINTMOTORPULSES 1
 #define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
@@ -227,13 +226,11 @@ void calculatePidControls(
   int16_t * y_psi_rate
 )
 {
-  static PID<float> phi_pid(3.4, 0., 15.0, 0., 0., -100., 100.);
-  static PID<float> theta_pid(3.4, 0., 15.0, 0., 0., -100., 100.);
+  static PID<float> phi_pid(4.4, 0.0, 15.0, 0., 0., -100., 100.);
+  static PID<float> theta_pid(4.4, 0.0, 15.0, 0., 0., -100., 100.);
   // Yaw rates can be large, the gains on yaw rate are lowered by a factor of 8 so
   // that the yaw PID output doesn't overwhelm the other PID outputs.
-  static PID<float> psi_rate_pid(0.0/8.0, 0., 0.0/8.0, 0., 0., -100., 100.);
-
-  // Output pulse length should be between 1000 and 2000.
+  static PID<float> psi_rate_pid(4.0/8.0, 0., 1.0/8.0, 0., 0., -100., 100.);
 
   float x_phi_rad = (*x_phi_deg)*(M_PI/180.);
   float x_theta_rad = (*x_theta_deg)*(M_PI/180.);
@@ -313,6 +310,7 @@ void calculateMotorMixtures(
   // Limit the throttle output so that PID controller has room to make
   // corrections.
   uint16_t limited_throttle = min(throttle, 1750);
+  //uint16_t limited_throttle = 1500;
   
   //tempMix = (limited_throttle + phi_ctl - theta_ctl - 0);
   tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
@@ -381,15 +379,15 @@ void loop() {
     {
       case FLIGHT:
         digitalWrite(LED_BUILTIN, LOW);
-        Serial.println("FLIGHT");
+        //Serial.println("FLIGHT");
         break;
       case NOFLIGHT:
         digitalWrite(LED_BUILTIN, HIGH);
-        Serial.println("NO FLIGHT, NEIN");
+        //Serial.println("NO FLIGHT, NEIN");
         break;
       case UNINITIALIZED:
         digitalWrite(LED_BUILTIN, HIGH);
-        Serial.println("UNINITIALIZED");
+        //Serial.println("UNINITIALIZED");
         break;
     }
     flightMode = newFlightMode;
@@ -414,13 +412,6 @@ void loop() {
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
     Serial.print(psi_rate_meas); Serial.print(" ");
-  }
-
-  if (PRINTIMURADINPUT)
-  {
-    Serial.print(phi_meas*M_PI/180.);      Serial.print(" ");
-    Serial.print(theta_meas*M_PI/180.);    Serial.print(" ");
-    Serial.print(psi_rate_meas*M_PI/180.); Serial.print(" ");
   }
 
   rxPulsesToSetPoints(
@@ -499,18 +490,18 @@ void loop() {
     }
   }
 
-  if (PRINTMOTORTIMERS)
-  {
-    Serial.print(motor_timers[0]); Serial.print(" ");
-    Serial.print(motor_timers[1]); Serial.print(" ");
-    Serial.print(motor_timers[2]); Serial.print(" ");
-    Serial.print(motor_timers[3]); Serial.print(" ");
-  }
-
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN > micros());
 
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS)
+  if (
+       PRINTRXPULSES
+    || PRINTMOTORPULSES
+    || PRINTIMUDEGINPUT
+    || PRINTCYCLELENGTH
+    || PRINTPIDOUTPUT
+    || PRINTPIDCONTROL
+    || PRINTSETPOINTS
+  )
   {
     Serial.println("");
   }
