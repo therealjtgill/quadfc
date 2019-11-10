@@ -363,8 +363,8 @@ void loop() {
   static double t = 0.;
   static double dt = 0.;
 
-  static double averageLoopTime = 0.;
-  static int loopCounter = 0;
+  //static double averageLoopTime = 0.;
+  //static int loopCounter = 0;
 
   static int16_t throttle = 0;
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -391,6 +391,7 @@ void loop() {
   {
     Serial.print(t - cycleStartTime); Serial.print(" ");
   }
+/*
   averageLoopTime += t - cycleStartTime;
   ++loopCounter;
   if (loopCounter > 1000)
@@ -399,6 +400,7 @@ void loop() {
     averageLoopTime = 0.;
     loopCounter = 0;
   }
+*/
   dt = (t - cycleStartTime)/1e6;
   cycleStartTime = micros();
 
@@ -484,8 +486,6 @@ void loop() {
   }
   t = micros();
 
-  //static double temp_t = 0;
-  //temp_t = micros();
   // Turn all of motor pulses on.
   PORTD |= B00111100;
 
@@ -536,7 +536,6 @@ void loop() {
       PORTD &= B11011111;
     }
   }
-  //Serial.println(micros() - temp_t);
 }
 
 /////////////////////////////////////////////////
