@@ -290,6 +290,7 @@ void loop() {
         //Serial.println("Tuning disabled");
         break;
       case ALLMOTORS:
+        //Serial.println("ALLMOTORS enabled");
         break;
       default:
         //Serial.println("Unknown mode");
@@ -354,7 +355,7 @@ void loop() {
     Serial.print(motor_pulses[3]); Serial.print(" ");
   }
 
-  // Turn all of motor pulses on.
+  // Turn all of the motor pulses on.
   PORTD |= B00111100;
 
   motorStartTime = micros();
