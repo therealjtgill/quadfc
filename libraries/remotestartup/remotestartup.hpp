@@ -71,12 +71,12 @@ TuningMode checkTuningMode(
    {
       return currentMode;
    }
-   
+
    if (
          rxPulses[0] <= 1200 
       && rxPulses[1] <= 1200
       && rxPulses[2] <= 1200
-      && rxPulses[3] <= 1200
+      && rxPulses[3] >= 1700
    )
    {
       return MOTOR1;
@@ -85,7 +85,7 @@ TuningMode checkTuningMode(
          rxPulses[0] <= 1200 
       && rxPulses[1] >= 1700
       && rxPulses[2] <= 1200
-      && rxPulses[3] <= 1200
+      && rxPulses[3] >= 1700
    )
    {
       return MOTOR2;
@@ -94,7 +94,7 @@ TuningMode checkTuningMode(
          rxPulses[0] >= 1700 
       && rxPulses[1] >= 1700
       && rxPulses[2] <= 1200
-      && rxPulses[3] <= 1200
+      && rxPulses[3] >= 1700
    )
    {
       return MOTOR3;
@@ -103,7 +103,7 @@ TuningMode checkTuningMode(
          rxPulses[0] >= 1700 
       && rxPulses[1] <= 1200
       && rxPulses[2] <= 1200
-      && rxPulses[3] <= 1200
+      && rxPulses[3] >= 1700
    )
    {
       return MOTOR4;
@@ -112,7 +112,7 @@ TuningMode checkTuningMode(
          rxPulses[0] <= 1200
       && rxPulses[1] <= 1200
       && rxPulses[2] <= 1200
-      && rxPulses[3] >= 1700
+      && rxPulses[3] <= 1200
    )
    {
       return TUNINGOFF;

@@ -10,7 +10,7 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTIMUACCOUTPUT 0
+#define PRINTIMUACCOUTPUT 1
 #define PRINTIMUGYROUPDATE 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
@@ -157,9 +157,14 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   if (PRINTIMUACCOUTPUT)
   {
-    Serial.print(acc_meas_out[0]); Serial.print(" ");
-    Serial.print(acc_meas_out[1]); Serial.print(" ");
-    Serial.print(acc_meas_out[2]); Serial.print(" ");
+    static float accMagnitude = 0.;
+    accMagnitude = 0.;
+    for (unsigned int i = 0; i < 3; ++i)
+    {
+      accMagnitude += acc_meas_out[i]*acc_meas_out[i];
+    }
+    accMagnitude = sqrt(accMagnitude)*100;
+    Serial.print(accMagnitude); Serial.print(" ");
   }
 }
 
@@ -246,6 +251,7 @@ void loop() {
   static TuningMode newTuneMode = 4;
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
+  static double modeTimeElapsed = 0.;
 
   static unsigned long loopTime = 0;
 
@@ -256,11 +262,11 @@ void loop() {
     initialized = true;
     t = micros();
   }
-  
+  modeTimeElapsed = millis() - currentTuneMode;
   newTuneMode = checkTuningMode(
     rx_pulses,
     currentTuneMode,
-    timeOfLastModeChange
+    modeTimeElapsed
   );
 
   if (newTuneMode != currentTuneMode)
@@ -269,22 +275,22 @@ void loop() {
     switch(newTuneMode)
     {
       case MOTOR1:
-        Serial.println("MOTOR1 Balancing");
+        //Serial.println("MOTOR1 Balancing");
         break;
       case MOTOR2:
-        Serial.println("MOTOR2 Balancing");
+        //Serial.println("MOTOR2 Balancing");
         break;
       case MOTOR3:
-        Serial.println("MOTOR3 Balancing");
+        //Serial.println("MOTOR3 Balancing");
         break;
       case MOTOR4:
-        Serial.println("MOTOR4 Balancing");
+        //Serial.println("MOTOR4 Balancing");
         break;
       case TUNINGOFF:
-        Serial.println("Tuning disabled");
+        //Serial.println("Tuning disabled");
         break;
       default:
-        Serial.println("Unknown mode");
+        //Serial.println("Unknown mode");
         break;
     }
     for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
