@@ -157,14 +157,9 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   if (PRINTIMUACCOUTPUT)
   {
-    static float accMagnitude = 0.;
-    accMagnitude = 0.;
-    for (unsigned int i = 0; i < 3; ++i)
-    {
-      accMagnitude += acc_meas_out[i]*acc_meas_out[i];
-    }
-    accMagnitude = sqrt(accMagnitude)*100;
-    Serial.print(accMagnitude); Serial.print(" ");
+    Serial.print(acc_meas_out[0]); Serial.print(" ");
+    Serial.print(acc_meas_out[1]); Serial.print(" ");
+    Serial.print(acc_meas_out[2]); Serial.print(" ");
   }
 }
 
@@ -247,11 +242,13 @@ void loop() {
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
+  static float acc_meas[3] = {0., 0., 0.};
+  static float gyro_meas_degps[3] = {0., 0., 0.};
+
   static TuningMode currentTuneMode = 4;
   static TuningMode newTuneMode = 4;
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
-  static double modeTimeElapsed = 0.;
 
   static unsigned long loopTime = 0;
 
@@ -262,11 +259,11 @@ void loop() {
     initialized = true;
     t = micros();
   }
-  modeTimeElapsed = millis() - currentTuneMode;
+  
   newTuneMode = checkTuningMode(
     rx_pulses,
     currentTuneMode,
-    modeTimeElapsed
+    timeOfLastModeChange
   );
 
   if (newTuneMode != currentTuneMode)
@@ -275,25 +272,22 @@ void loop() {
     switch(newTuneMode)
     {
       case MOTOR1:
-        //Serial.println("MOTOR1 Balancing");
+        Serial.println("MOTOR1 Balancing");
         break;
       case MOTOR2:
-        //Serial.println("MOTOR2 Balancing");
+        Serial.println("MOTOR2 Balancing");
         break;
       case MOTOR3:
-        //Serial.println("MOTOR3 Balancing");
+        Serial.println("MOTOR3 Balancing");
         break;
       case MOTOR4:
-        //Serial.println("MOTOR4 Balancing");
+        Serial.println("MOTOR4 Balancing");
         break;
       case TUNINGOFF:
-        //Serial.println("Tuning disabled");
-        break;
-      case ALLMOTORS:
-        //Serial.println("ALLMOTORS enabled");
+        Serial.println("Tuning disabled");
         break;
       default:
-        //Serial.println("Unknown mode");
+        Serial.println("Unknown mode");
         break;
     }
     for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
@@ -303,13 +297,6 @@ void loop() {
     if (newTuneMode < 4)
     {
       motor_pulses_mask[newTuneMode] = 1;
-    }
-    else if (newTuneMode == ALLMOTORS)
-    {
-      for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
-      {
-        motor_pulses_mask[i] = 1;
-      }
     }
     currentTuneMode = newTuneMode;
   }
@@ -322,6 +309,7 @@ void loop() {
   dt = (t - cycleStartTime)/1e6;
   cycleStartTime = micros();
   updateAngleCalculations(
+    acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &psi_rate_meas
   );
@@ -355,10 +343,14 @@ void loop() {
     Serial.print(motor_pulses[3]); Serial.print(" ");
   }
 
-  // Turn all of the motor pulses on.
+  // Turn all of motor pulses on.
   PORTD |= B00111100;
 
   motorStartTime = micros();
+
+  // This call takes ~750us, motors must be turned on for at least 1000us, so
+  // use 750us of that time to get gyro data instead of doing nothing.
+  getImuData(acc_meas, gyro_meas_degps);
 
   motor_timers[0] = motor_pulses[0] + motorStartTime;
   motor_timers[1] = motor_pulses[1] + motorStartTime;

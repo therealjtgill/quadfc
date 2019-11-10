@@ -9,12 +9,12 @@
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
-#define PRINTIMUDEGINPUT 0
+#define PRINTIMUDEGINPUT 1
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
-#define PRINTCYCLELENGTH 1
+#define PRINTCYCLELENGTH 0
 
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -367,6 +367,9 @@ void loop() {
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
+  static float acc_meas[3];
+  static float gyro_meas_degps[3];
+
   static unsigned long loopTime = 0;
   static OperationMode flightMode = UNINITIALIZED;
   static OperationMode newFlightMode = UNINITIALIZED;
@@ -413,6 +416,7 @@ void loop() {
   cycleStartTime = micros();
 
   updateAngleCalculations(
+    acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &psi_rate_meas
   );
@@ -472,7 +476,10 @@ void loop() {
     motor_pulses[2] = 2000;
     motor_pulses[3] = 2000;
   }
-  
+  // This call takes ~750us, motors must be turned on for at least 1000us, so
+  // use 750us of that time to get gyro data instead of doing nothing.
+  getImuData(acc_meas, gyro_meas_degps);
+
   motor_timers[0] = motor_pulses[0] + motorStartTime;
   motor_timers[1] = motor_pulses[1] + motorStartTime;
   motor_timers[2] = motor_pulses[2] + motorStartTime;
