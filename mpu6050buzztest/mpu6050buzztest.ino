@@ -10,7 +10,7 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTIMUACCOUTPUT 1
+#define PRINTIMUACCOUTPUT 0
 #define PRINTIMUGYROUPDATE 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
@@ -289,6 +289,8 @@ void loop() {
       case TUNINGOFF:
         //Serial.println("Tuning disabled");
         break;
+      case ALLMOTORS:
+        break;
       default:
         //Serial.println("Unknown mode");
         break;
@@ -300,6 +302,13 @@ void loop() {
     if (newTuneMode < 4)
     {
       motor_pulses_mask[newTuneMode] = 1;
+    }
+    else if (newTuneMode == ALLMOTORS)
+    {
+      for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
+      {
+        motor_pulses_mask[i] = 1;
+      }
     }
     currentTuneMode = newTuneMode;
   }
