@@ -12,9 +12,9 @@
 #define PRINTIMUDEGINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 1
+#define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
-#define PRINTCYCLELENGTH 0
+#define PRINTCYCLELENGTH 1
 
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -109,7 +109,8 @@ float interpolateLinear(
   bool clamp=true
 )
 {
-  float m = ((output_max - output_min)/(input_max - input_min));
+  static float m = 0.;
+  m = ((output_max - output_min)/(input_max - input_min));
   if (clamp)
   {
     return max(
@@ -128,14 +129,15 @@ float interpolateLinear(
 /////////////////////////////////////////////////
 void getImuData(float * acc_meas_out, float * gyro_meas_out)
 {
-  unsigned int i = 0;
+  static unsigned int i = 0;
+  i = 0;
 
   Wire.beginTransmission(0x68);
   Wire.write(0x3b);
   Wire.endTransmission(true);
   Wire.requestFrom(0x68, 14);
 
-  while(Wire.available() < 8);
+  while(Wire.available() < 14);
 
   for (i = 0; i < 3; ++i)
   {
@@ -198,7 +200,7 @@ void calculateGyroBiases(
 //  *phi_rate_bias_out   = 1.193965;
 //  *theta_rate_bias_out = 1.902589;
 //  *psi_rate_bias_out   = 0.2791016;
-  Serial.println("Read from EEPROM:");
+  //Serial.println("Read from EEPROM:");
   int ee_address = 0;
   EEPROM.get(ee_address, *phi_rate_bias_out);
   ee_address += sizeof(float);
@@ -232,16 +234,24 @@ void calculatePidControls(
   // that the yaw PID output doesn't overwhelm the other PID outputs.
   static PID<float> psi_rate_pid(4.0/8.0, 0., 1.0/8.0, 0., 0., -100., 100.);
 
-  float x_phi_rad = (*x_phi_deg)*(M_PI/180.);
-  float x_theta_rad = (*x_theta_deg)*(M_PI/180.);
-  float x_psi_radps = (*x_psi_degps)*(M_PI/180.);
+  static float x_phi_rad = 0.;
+  static float x_theta_rad = 0.;
+  static float x_psi_radps = 0.;
 
-  float phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
-  //float phi_filtered = phi_pid.filter(x_phi_deg, *u_phi);
-  float theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
-  //float theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
-  float psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, *u_psi_rate);
-  //float psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, *u_psi_rate);
+  static float phi_filtered = 0.;
+  static float theta_filtered = 0.;
+  static float psi_rate_filtered = 0.;
+
+  x_phi_rad = (*x_phi_deg)*(M_PI/180.);
+  x_theta_rad = (*x_theta_deg)*(M_PI/180.);
+  x_psi_radps = (*x_psi_degps)*(M_PI/180.);
+
+  phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
+  //phi_filtered = phi_pid.filter(x_phi_deg, *u_phi);
+  theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
+  //theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
+  psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, *u_psi_rate);
+  //psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, *u_psi_rate);
 
   *y_phi = static_cast<int16_t>(
     clamp<float>(
@@ -457,10 +467,10 @@ void loop() {
   motorStartTime = micros();
   if (flightMode != FLIGHT)
   {
-    motor_pulses[0] = 0;
-    motor_pulses[1] = 0;
-    motor_pulses[2] = 0;
-    motor_pulses[3] = 0;
+    motor_pulses[0] = 2000;
+    motor_pulses[1] = 2000;
+    motor_pulses[2] = 2000;
+    motor_pulses[3] = 2000;
   }
   
   motor_timers[0] = motor_pulses[0] + motorStartTime;
