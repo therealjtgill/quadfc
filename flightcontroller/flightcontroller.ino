@@ -4,12 +4,12 @@
 #include <EEPROM.h>
 #include <remotestartup.hpp>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
-#define CYCLELEN 4000 // Cycle length in microseconds
+#define CYCLELEN 4000. // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
-#define PRINTIMUDEGINPUT 1
+#define PRINTIMUDEGINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
@@ -363,6 +363,9 @@ void loop() {
   static double t = 0.;
   static double dt = 0.;
 
+  static double averageLoopTime = 0.;
+  static int loopCounter = 0;
+
   static int16_t throttle = 0;
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -383,6 +386,21 @@ void loop() {
     initialized = true;
     t = micros();
   }
+
+  if (PRINTCYCLELENGTH)
+  {
+    Serial.print(t - cycleStartTime); Serial.print(" ");
+  }
+  averageLoopTime += t - cycleStartTime;
+  ++loopCounter;
+  if (loopCounter > 1000)
+  {
+    Serial.println(averageLoopTime/static_cast<double>(loopCounter));
+    averageLoopTime = 0.;
+    loopCounter = 0;
+  }
+  dt = (t - cycleStartTime)/1e6;
+  cycleStartTime = micros();
 
   modeTimeElapsed = millis() - modeStartTime;
   newFlightMode = checkOperationMode(rx_pulses, flightMode, modeTimeElapsed);
@@ -406,14 +424,6 @@ void loop() {
     flightMode = newFlightMode;
     modeStartTime = millis();
   }
-
-  if (PRINTCYCLELENGTH)
-  {
-    Serial.print(t - cycleStartTime); Serial.print(" ");
-  }
-
-  dt = (t - cycleStartTime)/1e6;
-  cycleStartTime = micros();
 
   updateAngleCalculations(
     acc_meas, gyro_meas_degps,
@@ -457,14 +467,25 @@ void loop() {
     phi_ctl, theta_ctl, psi_rate_ctl, rx_pulses[2], motor_pulses
   );
 
-  if (PRINTMOTORPULSES)
-  {
-    Serial.print(motor_pulses[0]); Serial.print(" ");
-    Serial.print(motor_pulses[1]); Serial.print(" ");
-    Serial.print(motor_pulses[2]); Serial.print(" ");
-    Serial.print(motor_pulses[3]); Serial.print(" ");
-  }
+  // Pause for the rest of the 4000us loop.
+  while (cycleStartTime + CYCLELEN - 50 >= micros());
 
+  if (
+       PRINTRXPULSES
+    || PRINTMOTORPULSES
+    || PRINTIMUDEGINPUT
+    || PRINTCYCLELENGTH
+    || PRINTPIDOUTPUT
+    || PRINTPIDCONTROL
+    || PRINTSETPOINTS
+  )
+  {
+    Serial.println("");
+  }
+  t = micros();
+
+  //static double temp_t = 0;
+  //temp_t = micros();
   // Turn all of motor pulses on.
   PORTD |= B00111100;
 
@@ -476,6 +497,15 @@ void loop() {
     motor_pulses[2] = 2000;
     motor_pulses[3] = 2000;
   }
+
+  if (PRINTMOTORPULSES)
+  {
+    Serial.print(motor_pulses[0]); Serial.print(" ");
+    Serial.print(motor_pulses[1]); Serial.print(" ");
+    Serial.print(motor_pulses[2]); Serial.print(" ");
+    Serial.print(motor_pulses[3]); Serial.print(" ");
+  }
+
   // This call takes ~750us, motors must be turned on for at least 1000us, so
   // use 750us of that time to get gyro data instead of doing nothing.
   getImuData(acc_meas, gyro_meas_degps);
@@ -506,23 +536,7 @@ void loop() {
       PORTD &= B11011111;
     }
   }
-
-  // Pause for the rest of the 4000us loop.
-  while (cycleStartTime + CYCLELEN > micros());
-
-  if (
-       PRINTRXPULSES
-    || PRINTMOTORPULSES
-    || PRINTIMUDEGINPUT
-    || PRINTCYCLELENGTH
-    || PRINTPIDOUTPUT
-    || PRINTPIDCONTROL
-    || PRINTSETPOINTS
-  )
-  {
-    Serial.println("");
-  }
-  t = micros();
+  //Serial.println(micros() - temp_t);
 }
 
 /////////////////////////////////////////////////
