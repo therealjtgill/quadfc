@@ -10,13 +10,13 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
+#define PRINTIMUACCOUTPUT 0
 #define PRINTIMUGYROUPDATE 0
-#define PRINTIMURADINPUT 0
 #define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
-#define PRINTCYCLELENGTH 1
+#define PRINTCYCLELENGTH 0
 
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -154,6 +154,13 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
       gyro_meas_out[i] *= -1.0;
     }
   }
+
+  if (PRINTIMUACCOUTPUT)
+  {
+    Serial.print(acc_meas_out[0]); Serial.print(" ");
+    Serial.print(acc_meas_out[1]); Serial.print(" ");
+    Serial.print(acc_meas_out[2]); Serial.print(" ");
+  }
 }
 
 /////////////////////////////////////////////////
@@ -238,6 +245,11 @@ void loop() {
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
+  static TuningMode currentTuneMode = UNINITIALIZED;
+  static TuningMode newTuneMode = UNINITIALIZED;
+  static double timeOfLastModeChange = 0.;
+  static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
+
   static unsigned long loopTime = 0;
 
   if (!initialized)
@@ -248,6 +260,47 @@ void loop() {
     t = micros();
   }
   
+  newTuneMode = checkTuningMode(
+    rx_pulses,
+    currentTuneMode,
+    timeOfLastModeChange
+  )
+
+  if (newTuneMode != currentTuneMode)
+  {
+    timeOfLastModeChange = millis();
+    switch(newTuneMode)
+    {
+      case MOTOR1:
+        Serial.println("MOTOR1 Balancing");
+        break;
+      case MOTOR2:
+        Serial.println("MOTOR2 Balancing");
+        break;
+      case MOTOR3:
+        Serial.println("MOTOR3 Balancing");
+        break;
+      case MOTOR4:
+        Serial.println("MOTOR4 Balancing");
+        break;
+      case TUNINGOFF:
+        Serial.println("Tuning disabled");
+        break;
+      default:
+        Serial.println("Unknown mode");
+        break;
+    }
+    for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
+    {
+      motor_pulses_mask[i] = 0;
+    }
+    if (newTuneMode < 4)
+    {
+      motor_pulses_mask[newTuneMode] = 1;
+    }
+    currentTuneMode = newTuneMode;
+  }
+
   if (PRINTCYCLELENGTH)
   {
     Serial.print(t - cycleStartTime); Serial.print(" ");
@@ -276,10 +329,10 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
-  motor_pulses[0] = rx_pulses[2];
-  motor_pulses[1] = rx_pulses[2];
-  motor_pulses[2] = rx_pulses[2];
-  motor_pulses[3] = rx_pulses[2];
+  motor_pulses[0] = rx_pulses[2]*motor_pulses_mask[0];
+  motor_pulses[1] = rx_pulses[2]*motor_pulses_mask[1];
+  motor_pulses[2] = rx_pulses[2]*motor_pulses_mask[2];
+  motor_pulses[3] = rx_pulses[2]*motor_pulses_mask[3];
   
   if (PRINTMOTORPULSES)
   {
@@ -332,7 +385,7 @@ void loop() {
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN > micros());
 
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTIMURADINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS)
+  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS || PRINTIMUACCOUTPUT)
   {
     Serial.println("");
   }
