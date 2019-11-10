@@ -200,10 +200,7 @@ void calculateGyroBiases(
   ee_address += sizeof(float);
   EEPROM.put(ee_address, *psi_rate_bias_out);
 #else
-  // These values are hard-coded after many trials.
-//  *phi_rate_bias_out   = 1.193965;
-//  *theta_rate_bias_out = -1.902589;
-//  *psi_rate_bias_out   = 0.2791016;
+  // These values are saved to EEPROM after many trials.
   Serial.println("Read from EEPROM:");
   int ee_address = 0;
   EEPROM.get(ee_address, *phi_rate_bias_out);
@@ -245,8 +242,8 @@ void loop() {
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
-  static TuningMode currentTuneMode = UNINITIALIZED;
-  static TuningMode newTuneMode = UNINITIALIZED;
+  static TuningMode currentTuneMode = 4;
+  static TuningMode newTuneMode = 4;
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
 
@@ -264,7 +261,7 @@ void loop() {
     rx_pulses,
     currentTuneMode,
     timeOfLastModeChange
-  )
+  );
 
   if (newTuneMode != currentTuneMode)
   {

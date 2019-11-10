@@ -51,7 +51,7 @@ OperationMode checkOperationMode(
    return currentMode;
 }
 
-typedef enum TuningMode {MOTOR1=0, MOTOR2=1, MOTOR3=2, MOTOR4=3, UNINITIALIZED=4, TUNINGOFF=5} TuningMode;
+typedef enum TuningMode {MOTOR1=0, MOTOR2=1, MOTOR3=2, MOTOR4=3, BLANK=4, TUNINGOFF=5} TuningMode;
 
 // rxPulses is an array of four integers representing received pulse widths.
 // rxPulses[0] --> right joystick, right/left
