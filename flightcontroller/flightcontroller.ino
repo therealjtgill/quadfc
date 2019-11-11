@@ -492,10 +492,10 @@ void loop() {
   motorStartTime = micros();
   if (flightMode != FLIGHT)
   {
-    motor_pulses[0] = 2000;
-    motor_pulses[1] = 2000;
-    motor_pulses[2] = 2000;
-    motor_pulses[3] = 2000;
+    motor_pulses[0] = 0;
+    motor_pulses[1] = 0;
+    motor_pulses[2] = 0;
+    motor_pulses[3] = 0;
   }
 
   if (PRINTMOTORPULSES)
