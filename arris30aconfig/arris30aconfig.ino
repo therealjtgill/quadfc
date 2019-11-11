@@ -75,7 +75,6 @@ void loop() {
   static double t = 0.;
   static double dt = 0.;
 
-  static int16_t throttle = 0;
   static unsigned long motor_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
   static uint16_t motor_pulses[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 
@@ -105,11 +104,27 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
+/*
   motor_pulses[0] = rx_pulses[2];
   motor_pulses[1] = rx_pulses[2];
   motor_pulses[2] = rx_pulses[2];
   motor_pulses[3] = rx_pulses[2];
-  
+*/
+  if (rx_pulses[2] >= 1700)
+  {
+    motor_pulses[0] = 2000;
+    motor_pulses[1] = 2000;
+    motor_pulses[2] = 2000;
+    motor_pulses[3] = 2000;
+  }
+  else if (rx_pulses[2] <= 1200)
+  {
+    motor_pulses[0] = 1000;
+    motor_pulses[1] = 1000;
+    motor_pulses[2] = 1000;
+    motor_pulses[3] = 1000;
+  }
+
   if (PRINTMOTORPULSES)
   {
     Serial.print(motor_pulses[0]); Serial.print(" ");

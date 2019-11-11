@@ -10,7 +10,6 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTPIDOUTPUT 0
 #define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
@@ -217,70 +216,79 @@ void calculateGyroBiases(
 // u - setpoint
 // y - output
 void calculatePidControls(
-  const float * x_phi_deg,
-  const float * x_theta_deg,
-  const float * x_psi_degps,
-  const float * u_phi,
-  const float * u_theta,
-  const float * u_psi_rate,
-  int16_t * y_phi,
-  int16_t * y_theta,
-  int16_t * y_psi_rate
+  const float & x_phi_deg,
+  const float & x_theta_deg,
+  const float & x_psi_degps,
+  const float & u_phi_rad,
+  const float & u_theta_rad,
+  const float & u_psi_radps,
+  int16_t & y_phi,
+  int16_t & y_theta,
+  int16_t & y_psi_rate
 )
 {
-  static PID<float> phi_pid(4.4, 0.0, 15.0, 0., 0., -100., 100.);
-  static PID<float> theta_pid(4.4, 0.0, 15.0, 0., 0., -100., 100.);
-  // Yaw rates can be large, the gains on yaw rate are lowered by a factor of 8 so
-  // that the yaw PID output doesn't overwhelm the other PID outputs.
-  static PID<float> psi_rate_pid(4.0/8.0, 0., 1.0/8.0, 0., 0., -100., 100.);
+  // static PID<float> phi_pid(1.4, 0.01, 15.0, 0., 0., -100., 100.);
+  // static PID<float> theta_pid(1.4, 0.01, 15.0, 0., 0., -100., 100.);
+  // static PID<float> psi_rate_pid(4.0, 0.01, 0.0/8.0, 0., 0., -100., 100.);
+
+  static PID<float> phi_pid(1.4, 0.01, 15.0, 0., 0., -400., 400.);
+  static PID<float> theta_pid(1.4, 0.01, 15.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(1.0/8.0, 0.01, 0.0/8.0, 0., 0., -400., 400.);
 
   static float x_phi_rad = 0.;
   static float x_theta_rad = 0.;
   static float x_psi_radps = 0.;
 
+  static float u_phi_deg = 0.;
+  static float u_theta_deg = 0.;
+  static float u_psi_degps = 0.;
+
   static float phi_filtered = 0.;
   static float theta_filtered = 0.;
   static float psi_rate_filtered = 0.;
 
-  x_phi_rad = (*x_phi_deg)*(M_PI/180.);
-  x_theta_rad = (*x_theta_deg)*(M_PI/180.);
-  x_psi_radps = (*x_psi_degps)*(M_PI/180.);
+  x_phi_rad = (x_phi_deg)*(M_PI/180.);
+  x_theta_rad = (x_theta_deg)*(M_PI/180.);
+  x_psi_radps = (x_psi_degps)*(M_PI/180.);
 
-  phi_filtered = phi_pid.filter(x_phi_rad, *u_phi);
-  //phi_filtered = phi_pid.filter(x_phi_deg, *u_phi);
-  theta_filtered = theta_pid.filter(x_theta_rad, *u_theta);
-  //theta_filtered = theta_pid.filter(x_theta_deg, *u_theta);
-  psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, *u_psi_rate);
-  //psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, *u_psi_rate);
+  u_phi_deg = (u_phi_rad)*(180./M_PI);
+  u_theta_deg = (u_theta_rad)*(180./M_PI);
+  u_psi_degps = (u_psi_radps)*(180./M_PI);
 
-  *y_phi = static_cast<int16_t>(
-    clamp<float>(
-      37*phi_filtered,
-      -400.,
-      400.
-    )
-  );
-  *y_theta = static_cast<int16_t>(
-    clamp<float>(
-      37*theta_filtered,
-      -400.,
-      400.
-    )
-  );
-  *y_psi_rate = static_cast<int16_t>(
-    clamp<float>(
-      37*psi_rate_filtered,
-      -400.,
-      400.
-    )
-  );
-  if (PRINTPIDOUTPUT)
-  {
-    Serial.print(phi_filtered); Serial.print(" ");
-    Serial.print(theta_filtered); Serial.print(" ");
-    // The psi_rate measurement is super noisy, might need to low-pass filter it.
-    Serial.print(psi_rate_filtered); Serial.print(" ");
-  }
+  // phi_filtered = phi_pid.filter(x_phi_rad, u_phi_rad);
+  // theta_filtered = theta_pid.filter(x_theta_rad, u_theta_rad);
+  // psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, u_psi_radps);
+
+  // y_phi = static_cast<int16_t>(
+  //   clamp<float>(
+  //     37*phi_filtered,
+  //     -400.,
+  //     400.
+  //   )
+  // );
+  // y_theta = static_cast<int16_t>(
+  //   clamp<float>(
+  //     37*theta_filtered,
+  //     -400.,
+  //     400.
+  //   )
+  // );
+  // y_psi_rate = static_cast<int16_t>(
+  //   clamp<float>(
+  //     37*psi_rate_filtered,
+  //     -400.,
+  //     400.
+  //   )
+  // );
+
+  phi_filtered = phi_pid.filter(x_phi_deg, u_phi_deg);
+  theta_filtered = theta_pid.filter(x_theta_deg, u_theta_deg);
+  psi_rate_filtered = psi_rate_pid.filter(x_psi_degps, u_psi_degps);
+
+  y_phi = static_cast<int16_t>(phi_filtered);
+  y_theta = static_cast<int16_t>(theta_filtered);
+  y_psi_rate = static_cast<int16_t>(psi_rate_filtered);
+
 }
 
 /////////////////////////////////////////////////
@@ -451,11 +459,18 @@ void loop() {
     Serial.print(psi_rate_set); Serial.print(" ");
   }
 
-  calculatePidControls(
-    &phi_meas, &theta_meas, &psi_rate_meas,
-    &phi_set, &theta_set, &psi_rate_set,
-    &phi_ctl, &theta_ctl, &psi_rate_ctl
-  );
+  // Don't want PID values to increase or decrease while we're not in flight mode.
+  if (flightMode == FLIGHT)
+  {
+    theta_set = 0.;
+    phi_set = 0.;
+    psi_rate_set = 0.;
+    calculatePidControls(
+      phi_meas, theta_meas, psi_rate_meas,
+      phi_set,  theta_set,  psi_rate_set,
+      phi_ctl,  theta_ctl,  psi_rate_ctl
+    );
+  }
 
   if (PRINTPIDCONTROL)
   {
@@ -477,7 +492,6 @@ void loop() {
     || PRINTMOTORPULSES
     || PRINTIMUDEGINPUT
     || PRINTCYCLELENGTH
-    || PRINTPIDOUTPUT
     || PRINTPIDCONTROL
     || PRINTSETPOINTS
   )
