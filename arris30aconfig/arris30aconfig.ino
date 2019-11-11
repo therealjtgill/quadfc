@@ -1,7 +1,16 @@
-/*
+ /*
  * This connects all motor pulse outputs to the throttle input of the receiver.
  * This is for setting the minimum and maximum thresholds on the motor pulses.
  * 
+ * Load the program onto the Arduino
+ * Turn off the Arduino
+ * Turn on the remote control
+ * Set the throttle (channel 3) to its max value
+ * Connect Arduino to battery power (not USB)
+ * ESC's should beep
+ * Move throttle down to lowest level
+ * ESC's should beep again, indicating that max and min values have been set
+ * Move throttle up/down and verify that all motor speeds increase accordingly
  */
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4

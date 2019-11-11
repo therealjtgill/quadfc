@@ -247,6 +247,7 @@ void loop() {
 
   static TuningMode currentTuneMode = 4;
   static TuningMode newTuneMode = 4;
+  static double timeSinceLastModeChange = 0.;
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
 
@@ -259,11 +260,12 @@ void loop() {
     initialized = true;
     t = micros();
   }
-  
+
+  timeSinceLastModeChange = millis() - timeOfLastModeChange;
   newTuneMode = checkTuningMode(
     rx_pulses,
     currentTuneMode,
-    timeOfLastModeChange
+    timeSinceLastModeChange
   );
 
   if (newTuneMode != currentTuneMode)
@@ -286,6 +288,9 @@ void loop() {
       case TUNINGOFF:
         Serial.println("Tuning disabled");
         break;
+      case ALLMOTORS:
+        Serial.println("All motors");
+        break;
       default:
         Serial.println("Unknown mode");
         break;
@@ -297,6 +302,13 @@ void loop() {
     if (newTuneMode < 4)
     {
       motor_pulses_mask[newTuneMode] = 1;
+    }
+    if (newTuneMode == ALLMOTORS)
+    {
+      for (unsigned int i = 0; i < NUMRECEIVERCHANNELS; ++i)
+      {
+        motor_pulses_mask[i] = 1;
+      }
     }
     currentTuneMode = newTuneMode;
   }

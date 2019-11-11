@@ -118,10 +118,10 @@ TuningMode checkTuningMode(
       return TUNINGOFF;
    }
    else if (
-         rxPulses[0] <= 1700
-      && rxPulses[1] <= 1700
+         rxPulses[0] >= 1700
+      && rxPulses[1] >= 1700
       && rxPulses[2] <= 1200
-      && rxPulses[3] >= 1200
+      && rxPulses[3] <= 1200
    )
    {
       return ALLMOTORS;
