@@ -11,7 +11,7 @@
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
 #define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 0
+#define PRINTMOTORPULSES 1
 #define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
@@ -231,9 +231,9 @@ void calculatePidControls(
   // static PID<float> theta_pid(1.4, 0.01, 15.0, 0., 0., -100., 100.);
   // static PID<float> psi_rate_pid(4.0, 0.01, 0.0/8.0, 0., 0., -100., 100.);
 
-  static PID<float> phi_pid(1.4, 0.01, 15.0, 0., 0., -400., 400.);
-  static PID<float> theta_pid(1.4, 0.01, 15.0, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(1.0/8.0, 0.01, 0.0/8.0, 0., 0., -400., 400.);
+  static PID<float> phi_pid(1.4, 0.0, 10.0, 0., 0., -400., 400.);
+  static PID<float> theta_pid(1.4, 0.00, 10.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(1.0/8.0, 0.00, 1.0/8.0, 0., 0., -400., 400.);
 
   static float x_phi_rad = 0.;
   static float x_theta_rad = 0.;
@@ -467,8 +467,8 @@ void loop() {
     // phi_set = 0.;
     // theta_set = 0.;
     // psi_rate_set = 0.;
-    phi_set = phi_meas - phi_set;
-    theta_set = theta_meas - theta_set;
+    phi_set = (phi_set - phi_meas)/10;
+    theta_set = (theta_set - theta_meas)/10;
     calculatePidControls(
       phi_rate_meas, theta_rate_meas, psi_rate_meas,
       phi_set,  theta_set,  psi_rate_set,
@@ -524,8 +524,8 @@ void loop() {
     Serial.print(motor_pulses[3]); Serial.print(" ");
   }
 
-  // This call takes ~750us, motors must be turned on for at least 1000us, so
-  // use 750us of that time to get gyro data instead of doing nothing.
+  // This call takes ~750us, motor pulses must last for at least 1000us, so use
+  // 750us of that time to get gyro data instead of doing nothing.
   getImuData(acc_meas, gyro_meas_degps);
 
   motor_timers[0] = motor_pulses[0] + motorStartTime;
