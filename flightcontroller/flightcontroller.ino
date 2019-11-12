@@ -292,19 +292,27 @@ void calculateMotorMixtures(
   // corrections.
   uint16_t limited_throttle = min(throttle, 1750);
   //uint16_t limited_throttle = 1500;
+  if (limited_throttle >= 1250)
+  {
+    tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
+    motor_timers_out[0] = clamp<uint16_t>(tempMix, 900, 1900);
+    tempMix = (limited_throttle - phi_ctl - theta_ctl + psi_rate_ctl);
+    motor_timers_out[1] = clamp<uint16_t>(tempMix, 900, 1900);
+    tempMix = (limited_throttle - phi_ctl + theta_ctl - psi_rate_ctl);
+    motor_timers_out[2] = clamp<uint16_t>(tempMix, 900, 1900);
+    tempMix = (limited_throttle + phi_ctl + theta_ctl + psi_rate_ctl);
+    motor_timers_out[3] = clamp<uint16_t>(tempMix, 900, 1900);
+    return;
+  }
+  else
+  {
+    motor_timers_out[0] = 1000;
+    motor_timers_out[1] = 1000;
+    motor_timers_out[2] = 1000;
+    motor_timers_out[3] = 1000;
+    return;
+  }
   
-  //tempMix = (limited_throttle + phi_ctl - theta_ctl - 0);
-  tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
-  motor_timers_out[0] = clamp<uint16_t>(tempMix, 900, 1900);
-  //tempMix = (limited_throttle - phi_ctl - theta_ctl + 0);
-  tempMix = (limited_throttle - phi_ctl - theta_ctl + psi_rate_ctl);
-  motor_timers_out[1] = clamp<uint16_t>(tempMix, 900, 1900);
-  //tempMix = (limited_throttle - phi_ctl + theta_ctl - 0);
-  tempMix = (limited_throttle - phi_ctl + theta_ctl - psi_rate_ctl);
-  motor_timers_out[2] = clamp<uint16_t>(tempMix, 900, 1900);
-  //tempMix = (limited_throttle + phi_ctl + theta_ctl + 0);
-  tempMix = (limited_throttle + phi_ctl + theta_ctl + psi_rate_ctl);
-  motor_timers_out[3] = clamp<uint16_t>(tempMix, 900, 1900);
 }
 
 /////////////////////////////////////////////////
