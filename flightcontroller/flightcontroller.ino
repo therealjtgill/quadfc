@@ -11,7 +11,7 @@
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
 #define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 1
+#define PRINTMOTORPULSES 0
 #define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
@@ -195,10 +195,7 @@ void calculateGyroBiases(
   ee_address += sizeof(float);
   EEPROM.put(ee_address, *psi_rate_bias_out);
 #else
-  // These values are hard-coded after many trials.
-//  *phi_rate_bias_out   = 1.193965;
-//  *theta_rate_bias_out = 1.902589;
-//  *psi_rate_bias_out   = 0.2791016;
+
   //Serial.println("Read from EEPROM:");
   int ee_address = 0;
   EEPROM.get(ee_address, *phi_rate_bias_out);
@@ -227,17 +224,13 @@ void calculatePidControls(
   int16_t & y_psi_rate
 )
 {
-  // static PID<float> phi_pid(1.4, 0.01, 15.0, 0., 0., -100., 100.);
-  // static PID<float> theta_pid(1.4, 0.01, 15.0, 0., 0., -100., 100.);
-  // static PID<float> psi_rate_pid(4.0, 0.01, 0.0/8.0, 0., 0., -100., 100.);
-
   static PID<float> phi_pid(1.4, 0.0, 10.0, 0., 0., -400., 400.);
   static PID<float> theta_pid(1.4, 0.00, 10.0, 0., 0., -400., 400.);
   static PID<float> psi_rate_pid(1.0/8.0, 0.00, 1.0/8.0, 0., 0., -400., 400.);
 
-  static float x_phi_rad = 0.;
-  static float x_theta_rad = 0.;
-  static float x_psi_radps = 0.;
+//  static float x_phi_rad = 0.;
+//  static float x_theta_rad = 0.;
+//  static float x_psi_radps = 0.;
 
   static float u_phi_deg = 0.;
   static float u_theta_deg = 0.;
@@ -247,39 +240,13 @@ void calculatePidControls(
   static float theta_filtered = 0.;
   static float psi_rate_filtered = 0.;
 
-  x_phi_rad = (x_phi_deg)*(M_PI/180.);
-  x_theta_rad = (x_theta_deg)*(M_PI/180.);
-  x_psi_radps = (x_psi_degps)*(M_PI/180.);
+//  x_phi_rad = (x_phi_deg)*(M_PI/180.);
+//  x_theta_rad = (x_theta_deg)*(M_PI/180.);
+//  x_psi_radps = (x_psi_degps)*(M_PI/180.);
 
   u_phi_deg = (u_phi_rad)*(180./M_PI);
   u_theta_deg = (u_theta_rad)*(180./M_PI);
   u_psi_degps = (u_psi_radps)*(180./M_PI);
-
-  // phi_filtered = phi_pid.filter(x_phi_rad, u_phi_rad);
-  // theta_filtered = theta_pid.filter(x_theta_rad, u_theta_rad);
-  // psi_rate_filtered = psi_rate_pid.filter(x_psi_radps, u_psi_radps);
-
-  // y_phi = static_cast<int16_t>(
-  //   clamp<float>(
-  //     37*phi_filtered,
-  //     -400.,
-  //     400.
-  //   )
-  // );
-  // y_theta = static_cast<int16_t>(
-  //   clamp<float>(
-  //     37*theta_filtered,
-  //     -400.,
-  //     400.
-  //   )
-  // );
-  // y_psi_rate = static_cast<int16_t>(
-  //   clamp<float>(
-  //     37*psi_rate_filtered,
-  //     -400.,
-  //     400.
-  //   )
-  // );
 
   phi_filtered = phi_pid.filter(x_phi_deg, u_phi_deg);
   theta_filtered = theta_pid.filter(x_theta_deg, u_theta_deg);
@@ -302,14 +269,10 @@ void rxPulsesToSetPoints(
 {
   // After tinkering with the IMU, I decided that I don't want the drone to be able to
   // roll or pitch more than 15 degrees (from controller input).
-  // rx_pulses is a global array. size should always be 4.
-  //*u_phi_out      = interpolateLinear(1000, 2000, -M_PI/4., M_PI/4., rx_pulses[1]);
+  // rx_pulses is a global array, its size should always be 4.
   *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
-  //*u_phi_out      = interpolateLinear(1000, 2000, -45., 45., rx_pulses[1]);
   *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
-  //*u_theta_out    = interpolateLinear(1000, 2000, -45., 45., rx_pulses[0]);
   *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
-  //*u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
 }
 
 /////////////////////////////////////////////////
@@ -467,8 +430,8 @@ void loop() {
     // phi_set = 0.;
     // theta_set = 0.;
     // psi_rate_set = 0.;
-    phi_set = (phi_set - phi_meas)/10;
-    theta_set = (theta_set - theta_meas)/10;
+    phi_set = (5*phi_set - phi_meas)/10;
+    theta_set = (5*theta_set - theta_meas)/10;
     calculatePidControls(
       phi_rate_meas, theta_rate_meas, psi_rate_meas,
       phi_set,  theta_set,  psi_rate_set,
