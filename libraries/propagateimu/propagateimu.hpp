@@ -88,8 +88,6 @@ void updateAngleCalculations(
   float * psi_degps_out    // Previous measurement of psi rate, will be updated
 )
 {
-  //static float acc_meas[3]      = {0., 0., 0.};
-  //static float gyro_meas_degps[3] = {0., 0., 0.};
   static float gyro_filt_degps[3] = {0., 0., 0.};
   static float gyro_prev_degps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
@@ -115,8 +113,6 @@ void updateAngleCalculations(
   phi_prev_deg = *phi_deg_out;
   theta_prev_deg = *theta_deg_out;
   //psi_prev_degps = *psi_degps_out;
-
-  //getImuData(acc_meas, gyro_meas_degps);
 
   gyro_filt_degps[0] = beta*(gyro_filt_degps[0]) + (1 - beta)*(gyro_meas_degps[0] - *phi_degps_bias);
   gyro_filt_degps[1] = beta*(gyro_filt_degps[1]) + (1 - beta)*(gyro_meas_degps[1] - *theta_degps_bias);
