@@ -270,9 +270,12 @@ void rxPulsesToSetPoints(
   // After tinkering with the IMU, I decided that I don't want the drone to be able to
   // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array, its size should always be 4.
-  *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
-  *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
-  *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
+  // *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
+  // *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
+  // *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
+  *u_phi_out      = interpolateLinear(1000, 2000, -15., 15., rx_pulses[1]);
+  *u_theta_out    = interpolateLinear(1000, 2000, -15., 15., rx_pulses[0]);
+  *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
 }
 
 /////////////////////////////////////////////////
@@ -430,8 +433,8 @@ void loop() {
     // phi_set = 0.;
     // theta_set = 0.;
     // psi_rate_set = 0.;
-    phi_set = (5*phi_set - phi_meas)/10;
-    theta_set = (5*theta_set - theta_meas)/10;
+    phi_set = (phi_set - phi_meas)/10;
+    theta_set = (theta_set - theta_meas)/10;
     calculatePidControls(
       phi_rate_meas, theta_rate_meas, psi_rate_meas,
       phi_set,  theta_set,  psi_rate_set,
@@ -467,10 +470,6 @@ void loop() {
   }
   t = micros();
 
-  // Turn all of motor pulses on.
-  PORTD |= B00111100;
-
-  motorStartTime = micros();
   if (flightMode != FLIGHT)
   {
     motor_pulses[0] = 0;
@@ -486,6 +485,19 @@ void loop() {
     Serial.print(motor_pulses[2]); Serial.print(" ");
     Serial.print(motor_pulses[3]); Serial.print(" ");
   }
+
+  if (PRINTRXPULSES)
+  {
+    Serial.print(rx_pulses[0]); Serial.print(" ");
+    Serial.print(rx_pulses[1]); Serial.print(" ");
+    Serial.print(rx_pulses[2]); Serial.print(" ");
+    Serial.print(rx_pulses[3]); Serial.print(" ");
+  }
+
+  // Turn all of motor pulses on.
+  PORTD |= B00111100;
+
+  motorStartTime = micros();
 
   // This call takes ~750us, motor pulses must last for at least 1000us, so use
   // 750us of that time to get gyro data instead of doing nothing.
