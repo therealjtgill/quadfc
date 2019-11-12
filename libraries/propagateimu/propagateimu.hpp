@@ -81,9 +81,11 @@ void updateAngleCalculations(
   const float * theta_degps_bias,
   const float * psi_degps_bias,
   const float dt,
-  float * phi_deg_out,   // Previous measurement of phi, will be updated
-  float * theta_deg_out, // Previous measurement of theta, will be updated
-  float * psi_degps_out  // Previous measurement of psi, will be updated
+  float * phi_deg_out,     // Previous measurement of phi, will be updated
+  float * theta_deg_out,   // Previous measurement of theta, will be updated
+  float * phi_degps_out,   // Will be updated with filtered gyro output
+  float * theta_degps_out, // Will be updated with filtered gyro output
+  float * psi_degps_out    // Previous measurement of psi rate, will be updated
 )
 {
   //static float acc_meas[3]      = {0., 0., 0.};
@@ -120,7 +122,9 @@ void updateAngleCalculations(
   gyro_filt_degps[1] = beta*(gyro_filt_degps[1]) + (1 - beta)*(gyro_meas_degps[1] - *theta_degps_bias);
   gyro_filt_degps[2] = beta*(gyro_filt_degps[2]) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
 
-  *psi_degps_out = gyro_filt_degps[2];
+  *phi_degps_out   = gyro_filt_degps[0];
+  *theta_degps_out = gyro_filt_degps[1];
+  *psi_degps_out   = gyro_filt_degps[2];
 
   // Calculate phi and theta according to accelerometer output.
   phi_acc = atan2(acc_meas[1], acc_meas[2])*180./M_PI + 180;

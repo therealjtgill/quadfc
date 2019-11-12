@@ -354,6 +354,8 @@ void loop() {
 
   static float phi_meas = 0.;
   static float theta_meas = 0.;
+  static float phi_rate_meas = 0.;
+  static float theta_rate_meas = 0.;
   static float psi_rate_meas = 0.;
 
   static int16_t phi_ctl = 0.;
@@ -438,7 +440,7 @@ void loop() {
   updateAngleCalculations(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
-    &phi_meas, &theta_meas, &psi_rate_meas
+    &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
   );
 
   if (PRINTIMUDEGINPUT)
@@ -462,11 +464,13 @@ void loop() {
   // Don't want PID values to increase or decrease while we're not in flight mode.
   if (flightMode == FLIGHT)
   {
-    theta_set = 0.;
-    phi_set = 0.;
-    psi_rate_set = 0.;
+    // phi_set = 0.;
+    // theta_set = 0.;
+    // psi_rate_set = 0.;
+    phi_set = phi_meas - phi_set;
+    theta_set = theta_meas - theta_set;
     calculatePidControls(
-      phi_meas, theta_meas, psi_rate_meas,
+      phi_rate_meas, theta_rate_meas, psi_rate_meas,
       phi_set,  theta_set,  psi_rate_set,
       phi_ctl,  theta_ctl,  psi_rate_ctl
     );
