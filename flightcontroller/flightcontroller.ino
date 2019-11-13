@@ -6,6 +6,7 @@
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
 #define CYCLELEN 4000. // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
+#define MINTHROTTLE 1250
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
@@ -269,12 +270,21 @@ void rxPulsesToSetPoints(
   // After tinkering with the IMU, I decided that I don't want the drone to be able to
   // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array, its size should always be 4.
-  // *u_phi_out      = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[1]);
-  // *u_theta_out    = interpolateLinear(1000, 2000, -M_PI*15./180., M_PI*15./180., rx_pulses[0]);
-  // *u_psi_rate_out = interpolateLinear(1000, 2000, -M_PI/2., M_PI/2., rx_pulses[3]);
-  *u_phi_out      = interpolateLinear(1000, 2000, -15., 15., rx_pulses[1]);
-  *u_theta_out    = interpolateLinear(1000, 2000, -15., 15., rx_pulses[0]);
-  *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
+  uint16_t limited_throttle = min(rx_pulses[2], 1750);
+  if (limited_throttle >= MINTHROTTLE)
+  {
+    *u_phi_out      = interpolateLinear(1000, 2000, 15., -15., rx_pulses[1]);
+    *u_theta_out    = interpolateLinear(1000, 2000, 15., -15., rx_pulses[0]);
+    *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
+    return;
+  }
+  else
+  {
+    *u_phi_out      = 0.;
+    *u_theta_out    = 0.;
+    *u_psi_rate_out = 0.;
+    return;
+  }
 }
 
 /////////////////////////////////////////////////
@@ -294,7 +304,7 @@ void calculateMotorMixtures(
   // corrections.
   uint16_t limited_throttle = min(throttle, 1750);
   //uint16_t limited_throttle = 1500;
-  if (limited_throttle >= 1250)
+  if (limited_throttle >= MINTHROTTLE)
   {
     tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
     motor_timers_out[0] = clamp<uint16_t>(tempMix, 900, 1900);
