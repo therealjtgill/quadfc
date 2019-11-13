@@ -273,8 +273,8 @@ void rxPulsesToSetPoints(
   uint16_t limited_throttle = min(rx_pulses[2], 1750);
   if (limited_throttle >= MINTHROTTLE)
   {
-    *u_phi_out      = interpolateLinear(1000, 2000, 15., -15., rx_pulses[1]);
-    *u_theta_out    = interpolateLinear(1000, 2000, 15., -15., rx_pulses[0]);
+    *u_phi_out      = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[1]);
+    *u_theta_out    = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[0]);
     *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
     return;
   }
