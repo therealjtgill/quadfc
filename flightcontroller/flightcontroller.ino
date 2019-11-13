@@ -12,7 +12,7 @@
 #define PRINTSETPOINTS   0
 #define PRINTIMUDEGINPUT 0
 #define PRINTPIDCONTROL  0
-#define PRINTMOTORPULSES 1
+#define PRINTMOTORPULSES 0
 #define PRINTCYCLELENGTH 0
 
 int current_time = 0;
@@ -262,6 +262,10 @@ void rxPulsesToSetPoints(
   float * u_psi_rate_out
 )
 {
+  static float u_phi_prev = 0.;
+  static float u_theta_prev = 0.;
+  static float u_psi_rate_prev = 0.;
+  const static float alpha = 0.5;
   // After tinkering with the IMU, I decided that I don't want the drone to be able to
   // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array, its size should always be 4.
@@ -271,6 +275,10 @@ void rxPulsesToSetPoints(
     *u_phi_out      = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[1]);
     *u_theta_out    = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[0]);
     *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
+
+    *u_phi_out = alpha*(*u_phi_out) + (1 - alpha)*u_phi_prev;
+    *u_theta_out = alpha*(*u_theta_out) + (1 - alpha)*u_theta_prev;
+    *u_psi_rate_out = alpha*(*u_psi_rate_out) + (1 - alpha)*u_psi_rate_prev;
     return;
   }
   else
