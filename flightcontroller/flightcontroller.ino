@@ -11,7 +11,7 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTPIDCONTROL 1
+#define PRINTPIDCONTROL 0
 #define PRINTMOTORPULSES 0
 #define PRINTCYCLELENGTH 0
 
@@ -216,37 +216,29 @@ void calculatePidControls(
   const float & x_phi_deg,
   const float & x_theta_deg,
   const float & x_psi_degps,
-  const float & u_phi_rad,
-  const float & u_theta_rad,
-  const float & u_psi_radps,
+  const float & u_phi_deg,
+  const float & u_theta_deg,
+  const float & u_psi_degps,
   int16_t & y_phi,
   int16_t & y_theta,
   int16_t & y_psi_rate
 )
 {
-  static PID<float> phi_pid(1.4, 0.0, 10.0, 0., 0., -400., 400.);
-  static PID<float> theta_pid(1.4, 0.00, 10.0, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(2.0/8.0, 0.0005, 0.0/8.0, 0., 0., -400., 400.);
-
-//  static float x_phi_rad = 0.;
-//  static float x_theta_rad = 0.;
-//  static float x_psi_radps = 0.;
-
-  static float u_phi_deg = 0.;
-  static float u_theta_deg = 0.;
-  static float u_psi_degps = 0.;
+  static PID<float> phi_pid(2.4, 0.0, 15.0, 0., 0., -400., 400.);
+  static PID<float> theta_pid(2.4, 0.0, 15.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(1.0/2., 0.05/8, 0.0/8.0, 0., 0., -400., 400.);
+//
+//  static float u_phi_deg = 0.;
+//  static float u_theta_deg = 0.;
+//  static float u_psi_degps = 0.;
 
   static float phi_filtered = 0.;
   static float theta_filtered = 0.;
   static float psi_rate_filtered = 0.;
-
-//  x_phi_rad = (x_phi_deg)*(M_PI/180.);
-//  x_theta_rad = (x_theta_deg)*(M_PI/180.);
-//  x_psi_radps = (x_psi_degps)*(M_PI/180.);
-
-  u_phi_deg = (u_phi_rad)*(180./M_PI);
-  u_theta_deg = (u_theta_rad)*(180./M_PI);
-  u_psi_degps = (u_psi_radps)*(180./M_PI);
+//
+//  u_phi_deg = (u_phi_rad)*(180./M_PI);
+//  u_theta_deg = (u_theta_rad)*(180./M_PI);
+//  u_psi_degps = (u_psi_radps)*(180./M_PI);
 
   phi_filtered = phi_pid.filter(x_phi_deg, u_phi_deg);
   theta_filtered = theta_pid.filter(x_theta_deg, u_theta_deg);
@@ -450,8 +442,11 @@ void loop() {
     // phi_set = 0.;
     // theta_set = 0.;
     // psi_rate_set = 0.;
-    phi_set = (phi_set - phi_meas)/10;
-    theta_set = (theta_set - theta_meas)/10;
+    phi_set = (phi_set - phi_meas);
+    theta_set = (theta_set - theta_meas);
+//    Serial.print(phi_set); Serial.print(" ");
+//    Serial.print(theta_set); Serial.print(" ");
+//    Serial.println(psi_rate_set);
     calculatePidControls(
       phi_rate_meas, theta_rate_meas, psi_rate_meas,
       phi_set,  theta_set,  psi_rate_set,
