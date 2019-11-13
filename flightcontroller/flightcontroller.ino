@@ -229,7 +229,7 @@ void calculatePidControls(
 {
   static PID<float> phi_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
   static PID<float> theta_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(1.0/2., 0.05/8, 0.0/8.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(1.0/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
 //
 //  static float u_phi_deg = 0.;
 //  static float u_theta_deg = 0.;
@@ -449,8 +449,8 @@ void loop() {
     // phi_set = 0.;
     // theta_set = 0.;
     // psi_rate_set = 0.;
-    phi_set = (phi_set - phi_meas);
-    theta_set = (theta_set - theta_meas);
+    phi_set = 5*(phi_set - phi_meas);
+    theta_set = 5*(theta_set - theta_meas);
 //    Serial.print(phi_set); Serial.print(" ");
 //    Serial.print(theta_set); Serial.print(" ");
 //    Serial.println(psi_rate_set);
