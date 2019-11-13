@@ -85,7 +85,8 @@ void updateAngleCalculations(
   float * theta_deg_out,   // Previous measurement of theta, will be updated
   float * phi_degps_out,   // Will be updated with filtered gyro output
   float * theta_degps_out, // Will be updated with filtered gyro output
-  float * psi_degps_out    // Previous measurement of psi rate, will be updated
+  float * psi_degps_out,   // Previous measurement of psi rate, will be updated
+  bool only_accel=false    // If true, will only return accel angle estimates
 )
 {
   static float gyro_filt_degps[3] = {0., 0., 0.};
@@ -129,6 +130,20 @@ void updateAngleCalculations(
     phi_acc -= 360;
   }
   theta_acc = atan2(-1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*180./M_PI;
+
+  // Serial.print(phi_acc); Serial.print(" ");
+  // Serial.println(theta_acc);
+
+  if (only_accel)
+  {
+    *phi_deg_out = phi_acc;
+    *theta_deg_out = theta_acc;
+
+    gyro_prev_degps[0] = gyro_filt_degps[0];
+    gyro_prev_degps[1] = gyro_filt_degps[1];
+    gyro_prev_degps[2] = gyro_filt_degps[2];
+    return;
+  }
 
   // Calculate phi and theta according to gyro output.
   //phi_gyro_temp_deg = phi_prev_deg + gyro_filt_degps[0]*dt;

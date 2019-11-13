@@ -8,11 +8,11 @@
 #define NUMRECEIVERCHANNELS 4
 #define MINTHROTTLE 1250
 
-#define PRINTRXPULSES 0
-#define PRINTSETPOINTS 0
+#define PRINTRXPULSES    0
+#define PRINTSETPOINTS   0
 #define PRINTIMUDEGINPUT 0
-#define PRINTPIDCONTROL 0
-#define PRINTMOTORPULSES 0
+#define PRINTPIDCONTROL  0
+#define PRINTMOTORPULSES 1
 #define PRINTCYCLELENGTH 0
 
 int current_time = 0;
@@ -187,13 +187,16 @@ void calculateGyroBiases(
   *phi_rate_bias_out /= static_cast<float>(num_trials);
   *theta_rate_bias_out /= static_cast<float>(num_trials);
   *psi_rate_bias_out /= static_cast<float>(num_trials);
-  Serial.println("Saved to EEPROM.");
+  Serial.println("Saved to EEPROM:");
   int ee_address = 0;
   EEPROM.put(ee_address, *phi_rate_bias_out);
   ee_address += sizeof(float);
   EEPROM.put(ee_address, *theta_rate_bias_out);
   ee_address += sizeof(float);
   EEPROM.put(ee_address, *psi_rate_bias_out);
+  Serial.println(*phi_rate_bias_out);
+  Serial.println(*theta_rate_bias_out);
+  Serial.println(*psi_rate_bias_out);
 #else
 
   //Serial.println("Read from EEPROM:");
@@ -224,8 +227,8 @@ void calculatePidControls(
   int16_t & y_psi_rate
 )
 {
-  static PID<float> phi_pid(2.4, 0.0, 15.0, 0., 0., -400., 400.);
-  static PID<float> theta_pid(2.4, 0.0, 15.0, 0., 0., -400., 400.);
+  static PID<float> phi_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
+  static PID<float> theta_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
   static PID<float> psi_rate_pid(1.0/2., 0.05/8, 0.0/8.0, 0., 0., -400., 400.);
 //
 //  static float u_phi_deg = 0.;
@@ -364,6 +367,9 @@ void loop() {
   static double modeTimeElapsed = 0.;
   static double modeStartTime = 0.;
 
+  static bool firstFewLoops = true;
+  static uint8_t tenLoopCount = 0;
+
   if (!initialized)
   {
     calculateGyroBiases(&phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias);
@@ -415,7 +421,8 @@ void loop() {
   updateAngleCalculations(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
-    &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
+    &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas,
+    firstFewLoops
   );
 
   if (PRINTIMUDEGINPUT)
@@ -468,6 +475,15 @@ void loop() {
 
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN - 50 >= micros());
+
+  if (tenLoopCount < 10)
+  {
+    ++tenLoopCount;
+  }
+  else if (tenLoopCount >= 10 && firstFewLoops == true)
+  {
+    firstFewLoops = false;
+  }
 
   if (
        PRINTRXPULSES
