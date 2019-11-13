@@ -10,9 +10,8 @@
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
 #define PRINTIMUDEGINPUT 0
-#define PRINTPIDCONTROL 0
+#define PRINTPIDCONTROL 1
 #define PRINTMOTORPULSES 0
-#define PRINTMOTORTIMERS 0
 #define PRINTCYCLELENGTH 0
 
 int current_time = 0;
@@ -226,7 +225,7 @@ void calculatePidControls(
 {
   static PID<float> phi_pid(1.4, 0.0, 10.0, 0., 0., -400., 400.);
   static PID<float> theta_pid(1.4, 0.00, 10.0, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(1.0/8.0, 0.00, 1.0/8.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(2.0/8.0, 0.0005, 0.0/8.0, 0., 0., -400., 400.);
 
 //  static float x_phi_rad = 0.;
 //  static float x_theta_rad = 0.;
