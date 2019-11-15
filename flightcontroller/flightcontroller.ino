@@ -390,23 +390,6 @@ void loop() {
     t = micros();
   }
 
-  if (PRINTCYCLELENGTH)
-  {
-    Serial.print(t - cycleStartTime); Serial.print(" ");
-  }
-/*
-  averageLoopTime += t - cycleStartTime;
-  ++loopCounter;
-  if (loopCounter > 1000)
-  {
-    Serial.println(averageLoopTime/static_cast<double>(loopCounter));
-    averageLoopTime = 0.;
-    loopCounter = 0;
-  }
-*/
-  dt = (t - cycleStartTime)/1e6;
-  cycleStartTime = micros();
-
   modeTimeElapsed = millis() - modeStartTime;
   newFlightMode = checkOperationMode(rx_pulses, flightMode, modeTimeElapsed);
   if (newFlightMode != flightMode)
@@ -488,6 +471,16 @@ void loop() {
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN - 50 >= micros());
 
+  t = micros();
+
+  if (PRINTCYCLELENGTH)
+  {
+    Serial.print(t - cycleStartTime); Serial.print(" ");
+  }
+
+  dt = (t - cycleStartTime)/1e6;
+  cycleStartTime = micros();
+
   if (tenLoopCount < 10)
   {
     ++tenLoopCount;
@@ -524,7 +517,7 @@ void loop() {
   {
     Serial.println("");
   }
-  t = micros();
+
 
   if (flightMode != FLIGHT)
   {
