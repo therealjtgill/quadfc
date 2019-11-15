@@ -8,41 +8,37 @@ class PID
       float kP_;
       float kI_;
       float kD_;
-      numeric_T xPrev_;
-      numeric_T xIntegral_;
-      numeric_T uPrev_;
-      numeric_T uIntegral_;
+      numeric_T errorPrev_;
+      numeric_T errorIntegral_;
       numeric_T yPrev_;
       numeric_T yMin_;
       numeric_T yMax_;
 
    public:
       PID (float kP, float kI, float kD, numeric_T x, numeric_T u, numeric_T outMin, numeric_T outMax)
-         :  xIntegral_(0),
-            uIntegral_(0),
-            yMin_(outMin),
+         :  yMin_(outMin),
             yMax_(outMax),
             yPrev_(0)
       {
          kP_ = kP;
          kI_ = kI;
          kD_ = kD;
-         xPrev_ = x;
-         uPrev_ = u;
+         // xPrev_ = x;
+         // uPrev_ = u;
+         errorPrev_ = (x - u);
       }
 
       PID (float kP, float kI, float kD, numeric_T x, numeric_T u)
-         :  xIntegral_(0),
-            uIntegral_(0),
-            yMin_(-4096),
+         :  yMin_(-4096),
             yMax_(4096),
             yPrev_(0)
       {
          kP_ = kP;
          kI_ = kI;
          kD_ = kD;
-         xPrev_ = x;
-         uPrev_ = u;
+         //xPrev_ = x;
+         //uPrev_ = u;
+         errorPrev_ = (x - u);
       }
 
       ~PID (void)
@@ -53,21 +49,17 @@ class PID
       numeric_T filter (const numeric_T & x, const numeric_T & u)
       {
          numeric_T y = 0;
-         xIntegral_ += x;
-         uIntegral_ += u;
+         numeric_T error = (x - u);
 
-         if (!(yPrev_ > yMax_ && (x - u) > 0) || !(yPrev_ < yMin_ && (x - u) < 0))
-         {
-            y = kP_*(x - u) + kD_*((x - xPrev_) - (u - uPrev_)) + kI_*(xIntegral_ - uIntegral_);
-         }
-         else
-         {
-            y = kP_*(x - u) + kD_*((x - xPrev_) - (u - uPrev_));
-         }
+         errorIntegral_ += error;
+
+         errorIntegral_ = max(min(errorIntegral_, yMax_), yMin_);
+         y = kP_*error + kD_*(error - errorPrev_) + kI_*errorIntegral_;
+ 
          y = max(min(y, yMax_), yMin_);
          yPrev_ = y;
-         xPrev_ = x;
-         uPrev_ = u;
+         
+         errorPrev_ = error;
 
          return y;
       }
