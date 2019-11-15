@@ -126,14 +126,16 @@ float interpolateLinear(
 /////////////////////////////////////////////////
 void getImuData(float * acc_meas_out, float * gyro_meas_out)
 {
-  unsigned int i = 0;
+  static unsigned int i = 0;
+  i = 0;
+
   Wire.beginTransmission(0x68);
   Wire.write(0x3b);
   Wire.endTransmission(true);
   Wire.requestFrom(0x68, 14);
 
-  while(Wire.available() < 8);
-  
+  while(Wire.available() < 14);
+
   for (i = 0; i < 3; ++i)
   {
     acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
@@ -146,20 +148,11 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    // The factor of 400 exists to make numerical integration of angular rates
-    // from gyro roughly equal to accelerometer measurements (see mpu6050compfilt.ino).
     gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
     if (i == 1)
     {
       gyro_meas_out[i] *= -1.0;
     }
-  }
-
-  if (PRINTIMUACCOUTPUT)
-  {
-    Serial.print(acc_meas_out[0]); Serial.print(" ");
-    Serial.print(acc_meas_out[1]); Serial.print(" ");
-    Serial.print(acc_meas_out[2]); Serial.print(" ");
   }
 }
 
@@ -221,6 +214,8 @@ void loop() {
 
   static float phi_meas = 0.;
   static float theta_meas = 0.;
+  static float phi_rate_meas = 0.;
+  static float theta_rate_meas = 0.;
   static float psi_rate_meas = 0.;
 
   static int16_t phi_ctl = 0.;
@@ -320,10 +315,15 @@ void loop() {
 
   dt = (t - cycleStartTime)/1e6;
   cycleStartTime = micros();
+//  updateAngleCalculations(
+//    acc_meas, gyro_meas_degps,
+//    &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
+//    &phi_meas, &theta_meas, &psi_rate_meas
+//  );
   updateAngleCalculations(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
-    &phi_meas, &theta_meas, &psi_rate_meas
+    &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
   );
 
   if (PRINTIMUDEGINPUT)

@@ -227,9 +227,9 @@ void calculatePidControls(
   int16_t & y_psi_rate
 )
 {
-  static PID<float> phi_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
-  static PID<float> theta_pid(1.2, 0.0, 15.0, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(1.0/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
+  static PID<float> phi_pid(1.2, 0.00, 5.0, 0., 0., -400., 400.);
+  static PID<float> theta_pid(1.2, 0.00, 5.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(3.0/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
 //
 //  static float u_phi_deg = 0.;
 //  static float u_theta_deg = 0.;
@@ -265,20 +265,24 @@ void rxPulsesToSetPoints(
   static float u_phi_prev = 0.;
   static float u_theta_prev = 0.;
   static float u_psi_rate_prev = 0.;
-  const static float alpha = 0.5;
+  const static float alpha = 0.3;
   // After tinkering with the IMU, I decided that I don't want the drone to be able to
   // roll or pitch more than 15 degrees (from controller input).
   // rx_pulses is a global array, its size should always be 4.
   uint16_t limited_throttle = min(rx_pulses[2], 1750);
   if (limited_throttle >= MINTHROTTLE)
   {
-    *u_phi_out      = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[1]);
-    *u_theta_out    = -1.*interpolateLinear(1000, 2000, -15., 15., rx_pulses[0]);
-    *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
+    *u_phi_out      = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[1]);
+    *u_theta_out    = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[0]);
+    *u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
 
     *u_phi_out = alpha*(*u_phi_out) + (1 - alpha)*u_phi_prev;
     *u_theta_out = alpha*(*u_theta_out) + (1 - alpha)*u_theta_prev;
     *u_psi_rate_out = alpha*(*u_psi_rate_out) + (1 - alpha)*u_psi_rate_prev;
+
+    u_phi_prev = *u_phi_out;
+    u_theta_prev = *u_theta_out;
+    u_psi_rate_prev = *u_psi_rate_out;
     return;
   }
   else
@@ -444,19 +448,12 @@ void loop() {
     &phi_set, &theta_set, &psi_rate_set
   );
 
-  if (PRINTSETPOINTS)
-  {
-    Serial.print(phi_set); Serial.print(" ");
-    Serial.print(theta_set); Serial.print(" ");
-    Serial.print(psi_rate_set); Serial.print(" ");
-  }
-
   // Don't want PID values to increase or decrease while we're not in flight mode.
   if (flightMode == FLIGHT)
   {
-    // phi_set = 0.;
-    // theta_set = 0.;
-    // psi_rate_set = 0.;
+    //phi_set = 0.;
+    //theta_set = 0.;
+    //psi_rate_set = 0.;
     phi_set = 5*(phi_set - phi_meas);
     theta_set = 5*(theta_set - theta_meas);
 //    Serial.print(phi_set); Serial.print(" ");
@@ -467,6 +464,13 @@ void loop() {
       phi_set,  theta_set,  psi_rate_set,
       phi_ctl,  theta_ctl,  psi_rate_ctl
     );
+  }
+
+  if (PRINTSETPOINTS)
+  {
+    Serial.print(phi_set); Serial.print(" ");
+    Serial.print(theta_set); Serial.print(" ");
+    Serial.print(psi_rate_set); Serial.print(" ");
   }
 
   if (PRINTPIDCONTROL)
@@ -493,6 +497,22 @@ void loop() {
     firstFewLoops = false;
   }
 
+  if (PRINTMOTORPULSES)
+  {
+    Serial.print(motor_pulses[0]); Serial.print(" ");
+    Serial.print(motor_pulses[1]); Serial.print(" ");
+    Serial.print(motor_pulses[2]); Serial.print(" ");
+    Serial.print(motor_pulses[3]); Serial.print(" ");
+  }
+
+  if (PRINTRXPULSES)
+  {
+    Serial.print(rx_pulses[0]); Serial.print(" ");
+    Serial.print(rx_pulses[1]); Serial.print(" ");
+    Serial.print(rx_pulses[2]); Serial.print(" ");
+    Serial.print(rx_pulses[3]); Serial.print(" ");
+  }
+
   if (
        PRINTRXPULSES
     || PRINTMOTORPULSES
@@ -508,26 +528,10 @@ void loop() {
 
   if (flightMode != FLIGHT)
   {
-    motor_pulses[0] = 0;
-    motor_pulses[1] = 0;
-    motor_pulses[2] = 0;
-    motor_pulses[3] = 0;
-  }
-
-  if (PRINTMOTORPULSES)
-  {
-    Serial.print(motor_pulses[0]); Serial.print(" ");
-    Serial.print(motor_pulses[1]); Serial.print(" ");
-    Serial.print(motor_pulses[2]); Serial.print(" ");
-    Serial.print(motor_pulses[3]); Serial.print(" ");
-  }
-
-  if (PRINTRXPULSES)
-  {
-    Serial.print(rx_pulses[0]); Serial.print(" ");
-    Serial.print(rx_pulses[1]); Serial.print(" ");
-    Serial.print(rx_pulses[2]); Serial.print(" ");
-    Serial.print(rx_pulses[3]); Serial.print(" ");
+    motor_pulses[0] = 1000;
+    motor_pulses[1] = 1000;
+    motor_pulses[2] = 1000;
+    motor_pulses[3] = 1000;
   }
 
   // Turn all of motor pulses on.
