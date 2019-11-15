@@ -7,6 +7,9 @@
 #define CYCLELEN 4000. // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 #define MINTHROTTLE 1250
+#define KPANGLE 2.0
+#define KPGYRO 1.8
+#define KDGYRO 5.0
 
 #define PRINTRXPULSES    0
 #define PRINTSETPOINTS   0
@@ -227,8 +230,8 @@ void calculatePidControls(
   int16_t & y_psi_rate
 )
 {
-  static PID<float> phi_pid(1.2, 0.00, 5.0, 0., 0., -400., 400.);
-  static PID<float> theta_pid(1.2, 0.00, 5.0, 0., 0., -400., 400.);
+  static PID<float> phi_pid(KPGYRO, 0.00, KDGYRO, 0., 0., -400., 400.);
+  static PID<float> theta_pid(KPGYRO, 0.00, KDGYRO, 0., 0., -400., 400.);
   static PID<float> psi_rate_pid(3.0/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
 //
 //  static float u_phi_deg = 0.;
@@ -274,7 +277,7 @@ void rxPulsesToSetPoints(
   {
     *u_phi_out      = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[1]);
     *u_theta_out    = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[0]);
-    *u_psi_rate_out = interpolateLinear(1000, 2000, -90., 90., rx_pulses[3]);
+    *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
 
     *u_phi_out = alpha*(*u_phi_out) + (1 - alpha)*u_phi_prev;
     *u_theta_out = alpha*(*u_theta_out) + (1 - alpha)*u_theta_prev;
@@ -437,8 +440,8 @@ void loop() {
     //phi_set = 0.;
     //theta_set = 0.;
     //psi_rate_set = 0.;
-    phi_set = 5*(phi_set - phi_meas);
-    theta_set = 5*(theta_set - theta_meas);
+    phi_set = KPANGLE*(phi_set - phi_meas);
+    theta_set = KPANGLE*(theta_set - theta_meas);
 //    Serial.print(phi_set); Serial.print(" ");
 //    Serial.print(theta_set); Serial.print(" ");
 //    Serial.println(psi_rate_set);
