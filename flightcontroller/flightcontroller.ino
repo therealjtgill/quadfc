@@ -11,12 +11,13 @@
 #define KPGYRO 1.8
 #define KDGYRO 5.0
 
-#define PRINTRXPULSES    0
-#define PRINTSETPOINTS   0
-#define PRINTIMUDEGINPUT 0
-#define PRINTPIDCONTROL  0
-#define PRINTMOTORPULSES 0
-#define PRINTCYCLELENGTH 0
+#define PRINTRXPULSES      0
+#define PRINTSETPOINTS     0
+#define PRINTIMUDEGINPUT   0
+#define PRINTIMUDEGPSINPUT 0
+#define PRINTPIDCONTROL    0
+#define PRINTMOTORPULSES   0
+#define PRINTCYCLELENGTH   0
 
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -430,6 +431,13 @@ void loop() {
     Serial.print(psi_rate_meas); Serial.print(" ");
   }
 
+  if (PRINTIMUDEGPSINPUT)
+  {
+    Serial.print(phi_rate_meas); Serial.print(" ");
+    Serial.print(theta_rate_meas); Serial.print(" ");
+    Serial.print(psi_rate_meas); Serial.print(" ");
+  }
+
   rxPulsesToSetPoints(
     &phi_set, &theta_set, &psi_rate_set
   );
@@ -513,6 +521,7 @@ void loop() {
        PRINTRXPULSES
     || PRINTMOTORPULSES
     || PRINTIMUDEGINPUT
+    || PRINTIMUDEGPSINPUT
     || PRINTCYCLELENGTH
     || PRINTPIDCONTROL
     || PRINTSETPOINTS

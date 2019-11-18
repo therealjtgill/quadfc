@@ -9,7 +9,8 @@
 
 #define PRINTRXPULSES 0
 #define PRINTSETPOINTS 0
-#define PRINTIMUDEGINPUT 0
+#define PRINTIMUDEGINPUT 1
+#define PRINTIMUDEGPSINPUT 0
 #define PRINTIMUACCOUTPUT 0
 #define PRINTIMUGYROUPDATE 0
 #define PRINTPIDOUTPUT 0
@@ -333,6 +334,13 @@ void loop() {
     Serial.print(psi_rate_meas); Serial.print(" ");
   }
 
+  if (PRINTIMUDEGPSINPUT)
+  {
+    Serial.print(phi_rate_meas); Serial.print(" ");
+    Serial.print(theta_rate_meas); Serial.print(" ");
+    Serial.print(psi_rate_meas); Serial.print(" ");
+  }
+
   if (PRINTRXPULSES)
   {
     Serial.print(rx_pulses[0]); Serial.print(" ");
@@ -402,7 +410,18 @@ void loop() {
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN > micros());
 
-  if (PRINTRXPULSES || PRINTMOTORPULSES || PRINTIMUDEGINPUT || PRINTCYCLELENGTH || PRINTPIDOUTPUT || PRINTPIDCONTROL || PRINTSETPOINTS || PRINTMOTORTIMERS || PRINTIMUACCOUTPUT)
+  if (
+       PRINTRXPULSES
+    || PRINTMOTORPULSES
+    || PRINTIMUDEGINPUT
+    || PRINTCYCLELENGTH
+    || PRINTPIDOUTPUT
+    || PRINTPIDCONTROL
+    || PRINTSETPOINTS
+    || PRINTMOTORTIMERS
+    || PRINTIMUACCOUTPUT
+    || PRINTIMUDEGPSINPUT
+  )
   {
     Serial.println("");
   }
