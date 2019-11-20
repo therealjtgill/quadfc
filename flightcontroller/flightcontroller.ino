@@ -8,14 +8,14 @@
 #define NUMRECEIVERCHANNELS 4
 #define MINTHROTTLE 1250
 #define KPANGLE 2.0
-#define KPGYRO 1.8
-#define KDGYRO 5.0
+#define KPGYRO 1.6
+#define KDGYRO 7.0
 
 #define PRINTRXPULSES      0
 #define PRINTSETPOINTS     0
 #define PRINTIMUDEGINPUT   0
 #define PRINTIMUDEGPSINPUT 0
-#define PRINTPIDCONTROL    0
+#define PRINTPIDCONTROL    1
 #define PRINTMOTORPULSES   0
 #define PRINTCYCLELENGTH   0
 
@@ -318,13 +318,13 @@ void calculateMotorMixtures(
   if (limited_throttle >= MINTHROTTLE)
   {
     tempMix = (limited_throttle + phi_ctl - theta_ctl - psi_rate_ctl);
-    motor_timers_out[0] = clamp<uint16_t>(tempMix, 900, 1900);
+    motor_timers_out[0] = clamp<uint16_t>(tempMix, 1000, 1900);
     tempMix = (limited_throttle - phi_ctl - theta_ctl + psi_rate_ctl);
-    motor_timers_out[1] = clamp<uint16_t>(tempMix, 900, 1900);
+    motor_timers_out[1] = clamp<uint16_t>(tempMix, 1000, 1900);
     tempMix = (limited_throttle - phi_ctl + theta_ctl - psi_rate_ctl);
-    motor_timers_out[2] = clamp<uint16_t>(tempMix, 900, 1900);
+    motor_timers_out[2] = clamp<uint16_t>(tempMix, 1000, 1900);
     tempMix = (limited_throttle + phi_ctl + theta_ctl + psi_rate_ctl);
-    motor_timers_out[3] = clamp<uint16_t>(tempMix, 900, 1900);
+    motor_timers_out[3] = clamp<uint16_t>(tempMix, 1000, 1900);
     return;
   }
   else
@@ -385,6 +385,7 @@ void loop() {
 
   static bool firstFewLoops = true;
   static uint8_t tenLoopCount = 0;
+  static uint8_t numLoops = 0;
 
   if (!initialized)
   {
@@ -481,7 +482,7 @@ void loop() {
 
   // Pause for the rest of the 4000us loop.
   while (cycleStartTime + CYCLELEN - 50 >= micros());
-
+  numLoops += 1;
   t = micros();
 
   if (PRINTCYCLELENGTH)
@@ -501,12 +502,13 @@ void loop() {
     firstFewLoops = false;
   }
 
-  if (PRINTMOTORPULSES)
+  if (PRINTMOTORPULSES && (numLoops == 5))
   {
     Serial.print(motor_pulses[0]); Serial.print(" ");
     Serial.print(motor_pulses[1]); Serial.print(" ");
     Serial.print(motor_pulses[2]); Serial.print(" ");
     Serial.print(motor_pulses[3]); Serial.print(" ");
+    numLoops = 0;
   }
 
   if (PRINTRXPULSES)
