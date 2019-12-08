@@ -10,12 +10,13 @@
 #define KPANGLE 2.0
 #define KPGYRO 1.6
 #define KDGYRO 7.0
+#define KPPSIRATE 6.0
 
 #define PRINTRXPULSES      0
 #define PRINTSETPOINTS     0
 #define PRINTIMUDEGINPUT   0
 #define PRINTIMUDEGPSINPUT 0
-#define PRINTPIDCONTROL    1
+#define PRINTPIDCONTROL    0
 #define PRINTMOTORPULSES   0
 #define PRINTCYCLELENGTH   0
 
@@ -233,7 +234,7 @@ void calculatePidControls(
 {
   static PID<float> phi_pid(KPGYRO, 0.00, KDGYRO, 0., 0., -400., 400.);
   static PID<float> theta_pid(KPGYRO, 0.00, KDGYRO, 0., 0., -400., 400.);
-  static PID<float> psi_rate_pid(3.0/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
+  static PID<float> psi_rate_pid(KPPSIRATE/2., 0.00/8, 0.0/8.0, 0., 0., -400., 400.);
 //
 //  static float u_phi_deg = 0.;
 //  static float u_theta_deg = 0.;
@@ -449,6 +450,7 @@ void loop() {
     //phi_set = 0.;
     //theta_set = 0.;
     //psi_rate_set = 0.;
+    // This is the first stage of the cascaded PID controller (just a P gain, but that's ok).
     phi_set = KPANGLE*(phi_set - phi_meas);
     theta_set = KPANGLE*(theta_set - theta_meas);
 //    Serial.print(phi_set); Serial.print(" ");
