@@ -163,9 +163,8 @@ void updateAngleCalculationsQuaternion(
     gyro_prev_degps[2] = gyro_filt_degps[2];
 
     // Get global quaternion estimate from accelerometer readings.
-    // I'm using a 1-2-3 Tait-Bryan rotation matrix, the following is for 3-2-1.
+    // I'm using a 1-2-3 Tait-Bryan rotation matrix.
     // Pose quaternion needs to be initialized with this.
-    /*
     // Halved for quaternion conversion.
     float costheta = cos(theta_acc*M_PI/360.);
     float sintheta = sin(theta_acc*M_PI/360.);
@@ -174,24 +173,31 @@ void updateAngleCalculationsQuaternion(
     float sinphi = sin(phi_acc*M_PI/360.);
 
     omega_global_quat[0] =  costheta*cosphi;
-    omega_global_quat[1] = -sintheta*sinphi;
+    omega_global_quat[1] =  costheta*sinphi;
     omega_global_quat[2] =  sintheta*cosphi;
-    omega_global_quat[3] =  costheta*sinphi;
-    */
+    omega_global_quat[3] =  sintheta*sinphi;
 
     return;
   }
 
   // Calculate phi and theta according to gyro output.
-  //phi_gyro_temp_deg = phi_prev_deg + gyro_filt_degps[0]*dt;
+  /*
   phi_gyro_temp_deg = phi_prev_deg + gyro_prev_degps[0]*dt + 0.5*dt*(gyro_filt_degps[0] - gyro_prev_degps[0]);
-  //theta_gyro_temp_deg = theta_prev_deg + gyro_filt_degps[1]*dt;
   theta_gyro_temp_deg = theta_prev_deg + gyro_prev_degps[1]*dt + 0.5*dt*(gyro_filt_degps[1] - gyro_prev_degps[1]);
 
-  //sin_omega_z_dt = sin((gyro_prev_degps[2] + 0.5*(gyro_filt_degps[2] - gyro_prev_degps[2]))*dt*M_PI/180.);
   sin_omega_z_dt = sin(gyro_prev_degps[2]*dt*M_PI/180.);
   phi_gyro_temp_deg -= theta_gyro_temp_deg*sin_omega_z_dt;
   theta_gyro_temp_deg += phi_gyro_temp_deg*sin_omega_z_dt;
+  */
+
+  phi_gyro_temp_deg = atan2(
+    -2.*(pose_global_quat[2]*pose_global_quat[3] - pose_global_quat[1]*pose_global_quat[0]),
+    1 - 2.*(pose_global_quat[1]*pose_global_quat[1] + pose_global_quat[2]*pose_global_quat[2])
+  )*180/M_PI;
+
+  theta_gyro_temp_deg = asin(
+    2.*(pose_global_quat[1]*pose_global_quat[3] + pose_global_quat[2]*pose_global_quat[0])
+  )*180/M_PI;
 
   // Complementary filter of gyro and accelerometer.
   *phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
