@@ -15,7 +15,7 @@ class Matrix33
                 float a20, float a21, float a22)
          : name_("None")
 #ifdef MATHDEBUGGING
-         , logger_("quaterniondebug.log", "Quaternion")
+         , logger_("matrixdebug.log", "Matrix")
 #endif
       {
          Initialize (a00, a01, a02,
@@ -26,7 +26,7 @@ class Matrix33
       Matrix33 (const Matrix33 & M)
          : name_("None")
 #ifdef MATHDEBUGGING
-         , logger_("quaterniondebug.log", "Quaternion")
+         , logger_("matrixdebug.log", "Matrix")
 #endif
       {
          for (unsigned int i = 0; i < 3; ++i)
@@ -42,7 +42,7 @@ class Matrix33
       Matrix33 (void)
          : name_("None")
 #ifdef MATHDEBUGGING
-         , logger_("quaterniondebug.log", "Quaternion")
+         , logger_("matrixdebug.log", "Matrix")
 #endif
       {
          Initialize (0.0, 0.0, 0.0,
@@ -78,11 +78,11 @@ class Matrix33
       float determinant (void) const
       {
          float det = base_[0][0]*base_[1][1]*base_[2][2] +
-                             base_[0][1]*base_[1][2]*base_[2][0] +
-                             base_[0][2]*base_[1][0]*base_[2][1] -
-                             base_[2][0]*base_[1][1]*base_[0][2] -
-                             base_[2][1]*base_[1][2]*base_[0][0] -
-                             base_[2][2]*base_[1][0]*base_[0][1];
+                     base_[0][1]*base_[1][2]*base_[2][0] +
+                     base_[0][2]*base_[1][0]*base_[2][1] -
+                     base_[2][0]*base_[1][1]*base_[0][2] -
+                     base_[2][1]*base_[1][2]*base_[0][0] -
+                     base_[2][2]*base_[1][0]*base_[0][1];
          return det;
       }
 
