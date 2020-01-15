@@ -2,8 +2,8 @@
 #define VECTOR3
 
 #include <math.h>
-#include <iomanip>
-#include <iostream>
+//#include <iomanip>
+//#include <iostream>
 #include <assert.h>
 
 class Vector3
@@ -12,7 +12,7 @@ class Vector3
 
       Vector3 (float x, float y, float z)
          : pad_(1e-16)
-         , name_("None")
+         //, name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -22,7 +22,7 @@ class Vector3
 
       Vector3 (const Vector3 & in)
          : pad_(1e-16)
-         , name_("None")
+         //, name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -32,7 +32,7 @@ class Vector3
 
       Vector3 (const float in[3])
          : pad_(1e-16)
-         , name_("None")
+         //, name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -42,7 +42,7 @@ class Vector3
 
       Vector3 (void)
          : pad_(1e-16)
-         , name_("None")
+         //, name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -186,7 +186,7 @@ class Vector3
       {
          return Vector3(base_[0]*v[0], base_[1]*v[1], base_[2]*v[2]);
       }
-
+/*
       const std::string & getName (void) const
       {
          return name_;
@@ -202,7 +202,7 @@ class Vector3
          }
          return ret;
       }
-
+*/
    private:
       const float pad_;
 
@@ -212,7 +212,7 @@ class Vector3
 
       float dir_[3];
 
-      std::string name_;
+      //std::string name_;
 
 #ifdef MATHDEBUGGING
       Logger logger_;
@@ -227,7 +227,7 @@ class Vector3
       }
 
 };
-
+/*
 std::ostream & operator << (std::ostream & out, const Vector3 & a)
 {
    for (unsigned int j = 0; j < 3; ++j)
@@ -244,6 +244,7 @@ std::ostream & operator << (std::ostream & out, const Vector3 & a)
    }
    return out;
 }
+*/
 
 Vector3 operator* (const float & v, const Vector3 & a)
 {

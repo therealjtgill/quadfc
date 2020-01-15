@@ -2,8 +2,8 @@
 #define MATRIX33
 
 #include <assert.h>
-#include <iostream>
-#include <iomanip>
+//#include <iostream>
+//#include <iomanip>
 #include "vector3.hpp"
 
 class Matrix33
@@ -13,7 +13,7 @@ class Matrix33
       Matrix33 (float a00, float a01, float a02,
                 float a10, float a11, float a12,
                 float a20, float a21, float a22)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("matrixdebug.log", "Matrix")
 #endif
@@ -24,7 +24,7 @@ class Matrix33
       }
 
       Matrix33 (const Matrix33 & M)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("matrixdebug.log", "Matrix")
 #endif
@@ -40,7 +40,7 @@ class Matrix33
       }
 
       Matrix33 (void)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("matrixdebug.log", "Matrix")
 #endif
@@ -270,6 +270,7 @@ class Matrix33
          return A;
       }
 
+/*
       const std::string & getName (void) const
       {
          return name_;
@@ -285,12 +286,13 @@ class Matrix33
          }
          return ret;
       }
+*/
 
    private:
 
       Vector3 base_[3];
 
-      std::string name_;
+//      std::string name_;
 
       float determinant_;
 
@@ -310,6 +312,7 @@ class Matrix33
 
 };
 
+/*
 std::ostream & operator << (std::ostream & out, const Matrix33 & M)
 {
    for (unsigned int i = 0; i < 3; ++i)
@@ -329,6 +332,7 @@ std::ostream & operator << (std::ostream & out, const Matrix33 & M)
    }
    return out;
 }
+*/
 
 Matrix33 crossProductMatrix(const Vector3 & a)
 {

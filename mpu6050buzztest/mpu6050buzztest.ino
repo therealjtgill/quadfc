@@ -19,6 +19,8 @@
 #define PRINTMOTORTIMERS   0
 #define PRINTCYCLELENGTH   0
 
+#define TESTINGQUATERNIONS 1
+
 int current_time = 0;
 uint16_t rx_timers[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
 int rx_channels_last[NUMRECEIVERCHANNELS] = {0, 0, 0, 0};
@@ -139,7 +141,14 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
+    if (TESTINGQUATERNIONS)
+    {
+      acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
+    }
+    else
+    {
+      acc_meas_out[i] = ((float)((Wire.read() << 8) | Wire.read()))/4096.;
+    }
   }
 
   for (i = 0; i < 2; ++i)
@@ -150,7 +159,7 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   for (i = 0; i < 3; ++i)
   {
     gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
-    if (i == 1)
+    if (i == 1 && !TESTINGQUATERNIONS)
     {
       gyro_meas_out[i] *= -1.0;
     }
@@ -163,17 +172,20 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 void calculateGyroBiases(
   float * phi_rate_bias_out,
   float * theta_rate_bias_out,
-  float * psi_rate_bias_out
+  float * psi_rate_bias_out,
+  float * gyro_mag_bias_out
 )
 {
 #ifdef CALCULATEANDSAVEGYROBIASES
   
   float acc[3]  = {0., 0., 0.};
   float gyro[3] = {0., 0., 0.};
+  float gyro_mag = 0.;
 
   *phi_rate_bias_out = 0.;
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
+  *gyro_mag_bias_out = 0.;
   unsigned int num_trials = 10000;
   for (unsigned int i = 0; i < num_trials; ++i)
   {
@@ -181,11 +193,17 @@ void calculateGyroBiases(
     *phi_rate_bias_out += gyro[0];
     *theta_rate_bias_out += gyro[1];
     *psi_rate_bias_out += gyro[2];
+    *gyro_mag_bias_out += sqrt(
+      gyro[0]*gyro[0] +
+      gyro[1]*gyro[1] +
+      gyro[2]*gyro[2]
+    );
   }
 
   *phi_rate_bias_out /= static_cast<float>(num_trials);
   *theta_rate_bias_out /= static_cast<float>(num_trials);
   *psi_rate_bias_out /= static_cast<float>(num_trials);
+  *gyro_mag_bias_out /= static_cast<float>(num_trials);
   Serial.println("Saved to EEPROM.");
   int ee_address = 0;
   EEPROM.put(ee_address, *phi_rate_bias_out);
@@ -193,6 +211,8 @@ void calculateGyroBiases(
   EEPROM.put(ee_address, *theta_rate_bias_out);
   ee_address += sizeof(float);
   EEPROM.put(ee_address, *psi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.put(ee_address, *gyro_mag_bias_out);
 #else
   // These values are saved to EEPROM after many trials.
   Serial.println("Read from EEPROM:");
@@ -202,6 +222,8 @@ void calculateGyroBiases(
   EEPROM.get(ee_address, *theta_rate_bias_out);
   ee_address += sizeof(float);
   EEPROM.get(ee_address, *psi_rate_bias_out);
+  ee_address += sizeof(float);
+  EEPROM.get(ee_address, *gyro_mag_bias_out);
 #endif
 }
 
@@ -230,6 +252,7 @@ void loop() {
   static float phi_rate_gyr_bias = 0.;
   static float theta_rate_gyr_bias = 0.;
   static float psi_rate_gyr_bias = 0.;
+  static float gyro_mag_bias = 0.;
 
   static double t = 0.;
   static double dt = 0.;
@@ -251,7 +274,7 @@ void loop() {
 
   if (!initialized)
   {
-    calculateGyroBiases(&phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias);
+    calculateGyroBiases(&phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, &gyro_mag_bias);
     loopTime = 0;
     initialized = true;
     t = micros();
@@ -321,11 +344,14 @@ void loop() {
 //    &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
 //    &phi_meas, &theta_meas, &psi_rate_meas
 //  );
-  updateAngleCalculations(
+
+  double calct = micros();
+  updateAngleCalculationsQuaternion(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
   );
+  Serial.println(micros() - calct);
 
   if (PRINTIMUDEGINPUT)
   {
@@ -350,10 +376,17 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
+  /*
   motor_pulses[0] = rx_pulses[2]*motor_pulses_mask[0];
   motor_pulses[1] = rx_pulses[2]*motor_pulses_mask[1];
   motor_pulses[2] = rx_pulses[2]*motor_pulses_mask[2];
   motor_pulses[3] = rx_pulses[2]*motor_pulses_mask[3];
+  */
+
+  motor_pulses[0] = 0;
+  motor_pulses[1] = 0;
+  motor_pulses[2] = 0;
+  motor_pulses[3] = 0;
   
   if (PRINTMOTORPULSES)
   {

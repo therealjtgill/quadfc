@@ -12,7 +12,7 @@ class Quaternion
    public:
 
       Quaternion (void)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -21,7 +21,7 @@ class Quaternion
       }
 
       Quaternion (const float & a0, const Vector3 & b)
-         : name_("None")
+         //: name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -31,7 +31,7 @@ class Quaternion
       }
 
       Quaternion (const Quaternion & a)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -40,7 +40,7 @@ class Quaternion
       }
 
       Quaternion (float a0, float a1, float a2, float a3)
-         : name_("None")
+//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -263,7 +263,7 @@ class Quaternion
          result = conjugate()/magnitude();
          return result;
       }
-
+/*
       const std::string & getName (void) const
       {
          return name_;
@@ -279,13 +279,14 @@ class Quaternion
          }
          return ret;
       }
+*/
    private:
 
       float scalar_;
 
       Vector3 vector_;
 
-      std::string name_;
+//      std::string name_;
       
 #ifdef MATHDEBUGGING
       Logger logger_;
@@ -302,18 +303,21 @@ Quaternion operator* (const float & a, const Quaternion b)
 Quaternion exp (const Vector3 & u)
 {
    Quaternion result;
-   result.scalar() = cos(u.magnitude());
-   result.vector() = sin(u.magnitude())*u.unitVector();
+   float magnitude = u.magnitude();
+   result.scalar() = cos(magnitude);
+   result.vector() = sin(magnitude)*u/magnitude;
    //std::cout << "Magnitude of exponentiated quaternion: " << result.magnitude() << std::endl;
    result = result/result.magnitude();
    return result;
 }
 
+// This is only valid for unit quaternions.
 Quaternion exp (const Quaternion & u)
 {
    return exp(u.vector());
 }
 
+/*
 std::ostream & operator << (std::ostream & out, const Quaternion & a)
 {
    for (unsigned int j = 0; j < 4; ++j)
@@ -330,5 +334,6 @@ std::ostream & operator << (std::ostream & out, const Quaternion & a)
    }
    return out;
 }
+*/
 
 #endif
