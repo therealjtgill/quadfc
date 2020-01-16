@@ -4,12 +4,12 @@
 #include <Wire.h>
 #include <EEPROM.h>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
-#define CYCLELEN 4000 // Cycle length in microseconds
+#define CYCLELEN 0000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES      0
 #define PRINTSETPOINTS     0
-#define PRINTIMUDEGINPUT   0
+#define PRINTIMUDEGINPUT   1
 #define PRINTIMUDEGPSINPUT 0
 #define PRINTIMUACCOUTPUT  0
 #define PRINTIMUGYROUPDATE 0
@@ -270,6 +270,8 @@ void loop() {
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
 
+  static long int counter = 0;
+
   static unsigned long loopTime = 0;
 
   if (!initialized)
@@ -345,19 +347,24 @@ void loop() {
 //    &phi_meas, &theta_meas, &psi_rate_meas
 //  );
 
-  double calct = micros();
+  //double calct = micros();
   updateAngleCalculationsQuaternion(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
   );
-  Serial.println(micros() - calct);
-
-  if (PRINTIMUDEGINPUT)
+  //Serial.println(micros() - calct);
+  ++counter;
+  static double start_micros = 0.;
+  if (PRINTIMUDEGINPUT && (((counter + 1) % 2) == 0))
   {
+    
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
-    Serial.print(psi_rate_meas); Serial.print(" ");
+    Serial.print(psi_rate_meas); Serial.println(" ");
+    //Serial.println((micros() - start_micros)/100);
+    counter = 0;
+    start_micros = micros();
   }
 
   if (PRINTIMUDEGPSINPUT)
@@ -456,7 +463,7 @@ void loop() {
     || PRINTIMUDEGPSINPUT
   )
   {
-    Serial.println("");
+    //Serial.println("");
   }
   t = micros();
 }

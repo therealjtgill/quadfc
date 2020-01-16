@@ -12,7 +12,6 @@ class Quaternion
    public:
 
       Quaternion (void)
-//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -21,17 +20,14 @@ class Quaternion
       }
 
       Quaternion (const float & a0, const Vector3 & b)
-         //: name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
       {
          Initialize(a0, b[0], b[1], b[2]);
-         //std::cout << "the vector part of the quaternion: " << vector_ << std::endl;
       }
 
       Quaternion (const Quaternion & a)
-//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -40,7 +36,6 @@ class Quaternion
       }
 
       Quaternion (float a0, float a1, float a2, float a3)
-//         : name_("None")
 #ifdef MATHDEBUGGING
          , logger_("quaterniondebug.log", "Quaternion")
 #endif
@@ -58,14 +53,12 @@ class Quaternion
 
       float magnitude (void) const
       {
-         float m = sqrt(scalar_*scalar_ + vector_.magnitude()*vector_.magnitude());
-         return m;
+         return sqrt(scalar_*scalar_ + vector_.magnitude()*vector_.magnitude());;
       }
 
       float magnitudeSquared (void) const
       {
-         float m = scalar_*scalar_ + vector_.magnitude()*vector_.magnitude();
-         return m;
+         return scalar_*scalar_ + vector_.magnitude()*vector_.magnitude();
       }
 
       Vector3 & vector (void)
@@ -90,7 +83,9 @@ class Quaternion
 
       Quaternion conjugate (void) const
       {
-         Quaternion result(scalar(), -1.0*vector());
+         static Quaternion result;
+         result.scalar() = scalar();
+         result.vector() = -1.0*vector();
          return result;
       }
 
@@ -156,13 +151,17 @@ class Quaternion
          {
             return *this;
          }
-         Quaternion result(a[0], a[1], a[2], a[3]);
+         static Quaternion result;
+         result.scalar() = a[0];
+         result[1] = a[1];
+         result[2] = a[2];
+         result[3] = a[3];
          return result;
       }
 
       Quaternion operator* (float b) const
       {
-         Quaternion result;
+         static Quaternion result;
          for (unsigned int i = 0; i < 4; ++i)
          {
             result[i] = (*this)[i] * b;
@@ -172,7 +171,7 @@ class Quaternion
 
       Quaternion operator* (const Quaternion & b) const
       {
-         Quaternion result;
+         static Quaternion result;
          float a0 = scalar_;
          float b0 = b[0];
          Vector3 aVec = vector_;
@@ -263,31 +262,13 @@ class Quaternion
          result = conjugate()/magnitude();
          return result;
       }
-/*
-      const std::string & getName (void) const
-      {
-         return name_;
-      }
 
-      bool setName (const std::string & s)
-      {
-         bool ret = false;
-         if (name_ == "None")
-         {
-            ret = true;
-            name_ = s;
-         }
-         return ret;
-      }
-*/
    private:
 
       float scalar_;
 
       Vector3 vector_;
 
-//      std::string name_;
-      
 #ifdef MATHDEBUGGING
       Logger logger_;
 #endif
@@ -304,10 +285,12 @@ Quaternion exp (const Vector3 & u)
 {
    Quaternion result;
    float magnitude = u.magnitude();
-   result.scalar() = cos(magnitude);
-   result.vector() = sin(magnitude)*u/magnitude;
+   //result.scalar() = cos(magnitude);
+   result.scalar() = 1 - magnitude*magnitude/2.;
+   //result.vector() = sin(magnitude)*u/magnitude;
+   result.vector() = (1 - magnitude*magnitude/6.)*u;
    //std::cout << "Magnitude of exponentiated quaternion: " << result.magnitude() << std::endl;
-   result = result/result.magnitude();
+   //result = result/result.magnitude();
    return result;
 }
 
