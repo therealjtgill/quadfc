@@ -132,13 +132,12 @@ void updateAngleCalculationsQuaternion(
   static const float RADTODEG = 180./M_PI;
 
   static float gyro_filt_degps[3] = {0., 0., 0.};
-  static float gyro_filt_radps[3] = {0., 0., 0.};
   static float gyro_prev_degps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
   static float theta_acc        = 0.;
   static float theta_gyro_rad   = 0.;
   const static float alpha      = 0.9996;
-  const static float beta       = 0.5;
+  const static float beta       = 0.7;
 
   static float phi_prev_deg = 0.;
   static float theta_prev_deg = 0.;
@@ -153,82 +152,94 @@ void updateAngleCalculationsQuaternion(
 
   static float sin_omega_z_dt = 0.;
 
-  static float delta_omega_arr[4] = {0., 0., 0., 0.};
+  static float delta_omega_arr[3] = {0., 0., 0.};
   static float pose_global_arr[4] = {1., 0., 0., 0.};
   static float v0, v1, v2, v3;
+  static float s0, s1, s2, s3;
 
-  static double delta_alpha = 0.;
+  static float delta_omega_mag = 0.;
+  static float delta_omega_mag_squared = 0.;
+  static float cosdam = 0.;
+  static float sindam = 0.;
+  static float sindam_over_dam = 0.;
+
+  static float pose_quat_mag_squared = 0.;
+  static float correction = 0.;
   
   phi_prev_deg = *phi_deg_out;
   theta_prev_deg = *theta_deg_out;
   //psi_prev_degps = *psi_degps_out;
 
+  //1
   gyro_filt_degps[0] = beta*(gyro_filt_degps[0]) + (1 - beta)*(gyro_meas_degps[0] - *phi_degps_bias);
   gyro_filt_degps[1] = beta*(gyro_filt_degps[1]) + (1 - beta)*(gyro_meas_degps[1] - *theta_degps_bias);
   gyro_filt_degps[2] = beta*(gyro_filt_degps[2]) + (1 - beta)*(gyro_meas_degps[2] - *psi_degps_bias);
-
-  //gyro_filt_radps[0] = gyro_filt_degps[0]*DEGTORAD.;
-  //gyro_filt_radps[1] = gyro_filt_degps[1]*DEGTORAD.;
-  //gyro_filt_radps[2] = gyro_filt_degps[2]*DEGTORAD.;
 
   *phi_degps_out   = gyro_filt_degps[0];
   *theta_degps_out = gyro_filt_degps[1];
   *psi_degps_out   = gyro_filt_degps[2];
 
-  //pose_global_quat = pose_global_quat*exp(0.5*(1.5*dt*omega_body_quat - 0.5*dt*omega_body_quat_prev));
-
-  static float delta_omega_mag = 0.;
-  delta_omega_mag = sqrt(
-    gyro_filt_degps[0]*gyro_filt_degps[0] + 
-    gyro_filt_degps[1]*gyro_filt_degps[1] + 
-    gyro_filt_degps[2]*gyro_filt_degps[2]
-  )*DEGTORAD*0.5*dt;
-
-  static float cosdam;
-  static float sindam;
-
-  cosdam = cos(delta_omega_mag);
-  sindam = sin(delta_omega_mag);
-
-  v0 = cosdam;
-  v1 = sindam*gyro_filt_degps[0]*0.5*dt*DEGTORAD/delta_omega_mag;
-  v2 = sindam*gyro_filt_degps[1]*0.5*dt*DEGTORAD/delta_omega_mag;
-  v3 = sindam*gyro_filt_degps[2]*0.5*dt*DEGTORAD/delta_omega_mag;
-
-  //v0 = 1.0 - delta_omega_mag*delta_omega_mag/2.
-  //v1 = (1.0 - delta_omega_mag*delta_omega_mag/6.)*0.5*dt*gyro_filt_degps[0]*DEGTORAD;
-  //v2 = (1.0 - delta_omega_mag*delta_omega_mag/6.)*0.5*dt*gyro_filt_degps[1]*DEGTORAD;
-  //v3 = (1.0 - delta_omega_mag*delta_omega_mag/6.)*0.5*dt*gyro_filt_degps[2]*DEGTORAD;
-
-  static float s0, s1, s2, s3;
+  delta_omega_arr[0] = 1.5*gyro_filt_degps[0] - 0.5*gyro_prev_degps[0];
+  delta_omega_arr[1] = 1.5*gyro_filt_degps[1] - 0.5*gyro_prev_degps[1];
+  delta_omega_arr[2] = 1.5*gyro_filt_degps[2] - 0.5*gyro_prev_degps[2];
   
+  //delta_omega_mag = sqrt(
+  //  delta_omega_arr[0]*delta_omega_arr[0] + 
+  //  delta_omega_arr[1]*delta_omega_arr[1] + 
+  //  delta_omega_arr[2]*delta_omega_arr[2]
+  //)*DEGTORAD*0.5*dt;
+
+  delta_omega_mag_squared = (
+    delta_omega_arr[0]*delta_omega_arr[0] + 
+    delta_omega_arr[1]*delta_omega_arr[1] + 
+    delta_omega_arr[2]*delta_omega_arr[2]
+  )*DEGTORAD*DEGTORAD*0.25*dt*dt;
+  //1 300us
+
+  //1.5
+  //cosdam = cos(delta_omega_mag);
+  //sindam = sin(delta_omega_mag);
+  
+  //1.5 200us
+
+  //2
+  //v0 = cosdam;
+  //v1 = sindam*delta_omega_arr[0]*0.5*dt*DEGTORAD/delta_omega_mag;
+  //v2 = sindam*delta_omega_arr[1]*0.5*dt*DEGTORAD/delta_omega_mag;
+  //v3 = sindam*delta_omega_arr[2]*0.5*dt*DEGTORAD/delta_omega_mag;
+  //2 200us; removing division decreases this to 120us
+  
+  cosdam = 1.0 - delta_omega_mag_squared/2. + delta_omega_mag_squared*delta_omega_mag_squared/24;
+  sindam_over_dam = 1.0 - delta_omega_mag_squared/6. + delta_omega_mag_squared*delta_omega_mag_squared/120.;
+  v0 = cosdam;
+  v1 = sindam_over_dam*0.5*dt*gyro_filt_degps[0]*DEGTORAD;
+  v2 = sindam_over_dam*0.5*dt*gyro_filt_degps[1]*DEGTORAD;
+  v3 = sindam_over_dam*0.5*dt*gyro_filt_degps[2]*DEGTORAD;
+  
+  
+  //3
   s0 = pose_global_arr[0];
   s1 = pose_global_arr[1];
   s2 = pose_global_arr[2];
   s3 = pose_global_arr[3];
-
+  
   pose_global_arr[0] = s0*v0 - (s1*v1 + s2*v2 + s3*v3);
   pose_global_arr[1] = s0*v1 + v0*s1 + s2*v3 - s3*v2;
   pose_global_arr[2] = s0*v2 + v0*s2 + s3*v1 - s1*v3;
   pose_global_arr[3] = s0*v3 + v0*s3 + s1*v2 - s2*v1;
-
-  //static double t = 0.;
-  //t = micros();
-
-  //Serial.print(micros() - t); Serial.println(" ");
-
-  static float pose_quat_mag = 0.;
-  static float correction = 0.;
-  pose_quat_mag = sqrt(
+  //3 272us
+  
+  //4 
+  pose_quat_mag_squared = 
     pose_global_arr[0]*pose_global_arr[0] +
     pose_global_arr[1]*pose_global_arr[1] +
     pose_global_arr[2]*pose_global_arr[2] +
-    pose_global_arr[3]*pose_global_arr[3]
-  );
-
-  if (pose_quat_mag < 0.99)
+    pose_global_arr[3]*pose_global_arr[3];
+  //4 64us
+  
+  if (pose_quat_mag_squared < 0.9801)
   {
-    correction = 0.1*(1.0 - pose_quat_mag*pose_quat_mag)*dt;
+    correction = 0.1*(1.0 - pose_quat_mag_squared)*dt;
 
     pose_global_arr[0] += correction*pose_global_arr[0];
     pose_global_arr[1] += correction*pose_global_arr[1];
@@ -268,14 +279,19 @@ void updateAngleCalculationsQuaternion(
     return;
   }
 
+  //5
   phi_gyro_temp_deg = atan2(
     2.*(pose_global_arr[2]*pose_global_arr[3] + pose_global_arr[1]*pose_global_arr[0]),
     1 - 2.*(pose_global_arr[1]*pose_global_arr[1] + pose_global_arr[2]*pose_global_arr[2])
   )*RADTODEG - dt*-0.0104633889;
+  //5 300us
 
+  //6
   theta_gyro_temp_deg = asin(
     2.*(pose_global_arr[0]*pose_global_arr[2] - pose_global_arr[1]*pose_global_arr[3])
   )*RADTODEG - dt*0.0203988087;
+  //6 132us
+ 
 
   // Complementary filter of gyro and accelerometer.
   //*phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
