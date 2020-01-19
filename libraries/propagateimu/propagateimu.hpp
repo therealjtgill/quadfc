@@ -70,49 +70,17 @@ void propagatePitchRoll(
    roll_out = asin(sinroll);
 }
 
-float ApproxAtan2(float y, float x)
+void quatMult(const float * a, const float * b, float * c)
 {
-    const float n1 = 0.97239411f;
-    const float n2 = -0.19194795f; 
-    const float PI_2 = M_PI/2.;
-    //const float PI = M_PI;   
-    float result = 0.0f;
-    if (x != 0.0f)
-    {
-        const union { float flVal; uint32_t nVal; } tYSign = { y };
-        const union { float flVal; uint32_t nVal; } tXSign = { x };
-        if (fabsf(x) >= fabsf(y))
-        {
-            union { float flVal; uint32_t nVal; } tOffset = { PI };
-            // Add or subtract PI based on y's sign.
-            tOffset.nVal |= tYSign.nVal & 0x80000000u;
-            // No offset if x is positive, so multiply by 0 or based on x's sign.
-            tOffset.nVal *= tXSign.nVal >> 31;
-            result = tOffset.flVal;
-            const float z = y / x;
-            result += (n1 + n2 * z * z) * z;
-        }
-        else // Use atan(y/x) = pi/2 - atan(x/y) if |y/x| > 1.
-        {
-            union { float flVal; uint32_t nVal; } tOffset = { PI_2 };
-            // Add or subtract PI/2 based on y's sign.
-            tOffset.nVal |= tYSign.nVal & 0x80000000u;            
-            result = tOffset.flVal;
-            const float z = x / y;
-            result -= (n1 + n2 * z * z) * z;            
-        }
-    }
-    else if (y > 0.0f)
-    {
-        result = PI_2;
-    }
-    else if (y < 0.0f)
-    {
-        result = -PI_2;
-    }
-    return result;
+  c[0] = a[0]*b[0] - (a[1]*b[1] + a[2]*b[2] + a[3]*b[3]);
+  c[1] = a[0]*b[1] + b[0]*a[1] + a[2]*b[3] - a[3]*b[2];
+  c[2] = a[0]*b[2] + b[0]*a[2] + a[3]*b[1] - a[1]*b[3];
+  c[3] = a[0]*b[3] + b[0]*a[3] + a[1]*b[2] - a[2]*b[1];
 }
 
+// Need to rotate omega_body into lab frame, note that the current quaternion
+// keeping track of the frame in lab frame has to be inverted.
+//  omega_lab = (q_lab_to_body^-1) x omega_body x (q_lab_to_body)
 void updateAngleCalculationsQuaternion(
   const float * acc_meas,
   const float * gyro_meas_degps,
@@ -135,7 +103,6 @@ void updateAngleCalculationsQuaternion(
   static float gyro_prev_degps[3] = {0., 0., 0.};
   static float phi_acc          = 0.;
   static float theta_acc        = 0.;
-  static float theta_gyro_rad   = 0.;
   const static float alpha      = 0.9996;
   const static float beta       = 0.7;
 
@@ -152,10 +119,13 @@ void updateAngleCalculationsQuaternion(
 
   static float sin_omega_z_dt = 0.;
 
-  static float delta_omega_arr[3] = {0., 0., 0.};
-  static float pose_global_arr[4] = {1., 0., 0., 0.};
-  static float v0, v1, v2, v3;
-  static float s0, s1, s2, s3;
+  static float delta_omega_body_radps[3] = {0., 0., 0.};
+  //static float delta_omega_global_radps[3] = {0., 0., 0.};
+  static float q_body[4] = {1., 0., 0., 0.}; // Orientation quaternion in global frame.
+  //static float v0, v1, v2, v3;
+  //static float s0, s1, s2, s3;
+  static float v[4] = {0., 0., 0., 0.};
+  static float s[4] = {0., 0., 0., 0.};
 
   static float delta_omega_mag = 0.;
   static float delta_omega_mag_squared = 0.;
@@ -165,7 +135,9 @@ void updateAngleCalculationsQuaternion(
 
   static float pose_quat_mag_squared = 0.;
   static float correction = 0.;
-  
+
+  //1300us to complete entire function call
+
   phi_prev_deg = *phi_deg_out;
   theta_prev_deg = *theta_deg_out;
   //psi_prev_degps = *psi_degps_out;
@@ -179,72 +151,126 @@ void updateAngleCalculationsQuaternion(
   *theta_degps_out = gyro_filt_degps[1];
   *psi_degps_out   = gyro_filt_degps[2];
 
-  delta_omega_arr[0] = 1.5*gyro_filt_degps[0] - 0.5*gyro_prev_degps[0];
-  delta_omega_arr[1] = 1.5*gyro_filt_degps[1] - 0.5*gyro_prev_degps[1];
-  delta_omega_arr[2] = 1.5*gyro_filt_degps[2] - 0.5*gyro_prev_degps[2];
+  delta_omega_body_radps[0] = (1.5*gyro_filt_degps[0] - 0.5*gyro_prev_degps[0])*DEGTORAD;
+  delta_omega_body_radps[1] = (1.5*gyro_filt_degps[1] - 0.5*gyro_prev_degps[1])*DEGTORAD;
+  delta_omega_body_radps[2] = (1.5*gyro_filt_degps[2] - 0.5*gyro_prev_degps[2])*DEGTORAD;
   
-  //delta_omega_mag = sqrt(
-  //  delta_omega_arr[0]*delta_omega_arr[0] + 
-  //  delta_omega_arr[1]*delta_omega_arr[1] + 
-  //  delta_omega_arr[2]*delta_omega_arr[2]
-  //)*DEGTORAD*0.5*dt;
+  delta_omega_mag = sqrt(
+    delta_omega_body_radps[0]*delta_omega_body_radps[0] + 
+    delta_omega_body_radps[1]*delta_omega_body_radps[1] + 
+    delta_omega_body_radps[2]*delta_omega_body_radps[2]
+  );
 
-  delta_omega_mag_squared = (
-    delta_omega_arr[0]*delta_omega_arr[0] + 
-    delta_omega_arr[1]*delta_omega_arr[1] + 
-    delta_omega_arr[2]*delta_omega_arr[2]
-  )*DEGTORAD*DEGTORAD*0.25*dt*dt;
+  //delta_omega_mag_squared = (
+  //  delta_omega_body_arr[0]*delta_omega_body_arr[0] + 
+  //  delta_omega_body_arr[1]*delta_omega_body_arr[1] + 
+  //  delta_omega_body_arr[2]*delta_omega_body_arr[2]
+  //)*DEGTORAD*DEGTORAD*0.25*dt*dt;
+  //Serial.println(delta_omega_mag_squared, 16);
+  //delta_omega_mag_squared = (delta_omega_mag_squared > 1e-8) ? delta_omega_mag_squared : 0.;
   //1 300us
-
-  //1.5
-  //cosdam = cos(delta_omega_mag);
-  //sindam = sin(delta_omega_mag);
   
-  //1.5 200us
-
-  //2
-  //v0 = cosdam;
-  //v1 = sindam*delta_omega_arr[0]*0.5*dt*DEGTORAD/delta_omega_mag;
-  //v2 = sindam*delta_omega_arr[1]*0.5*dt*DEGTORAD/delta_omega_mag;
-  //v3 = sindam*delta_omega_arr[2]*0.5*dt*DEGTORAD/delta_omega_mag;
-  //2 200us; removing division decreases this to 120us
-  
+  /*
+  // The faster delta calculation.
   cosdam = 1.0 - delta_omega_mag_squared/2. + delta_omega_mag_squared*delta_omega_mag_squared/24;
-  sindam_over_dam = 1.0 - delta_omega_mag_squared/6. + delta_omega_mag_squared*delta_omega_mag_squared/120.;
+  if (delta_omega_mag_squared == 0.)
+  {
+    sindam_over_dam = 0.;
+  }
+  else
+  {
+    sindam_over_dam = 1.0 - delta_omega_mag_squared/6. + delta_omega_mag_squared*delta_omega_mag_squared/120.;
+  }
+  
   v0 = cosdam;
   v1 = sindam_over_dam*0.5*dt*gyro_filt_degps[0]*DEGTORAD;
   v2 = sindam_over_dam*0.5*dt*gyro_filt_degps[1]*DEGTORAD;
   v3 = sindam_over_dam*0.5*dt*gyro_filt_degps[2]*DEGTORAD;
+  */
+
+  static double inv_delta_omega_mag = 0.;
+  inv_delta_omega_mag = 1./delta_omega_mag;
+  cosdam = cos(delta_omega_mag*0.5*dt);
+  sindam = sin(delta_omega_mag*0.5*dt);
+
+  v[0] = cosdam;
+  v[1] = sindam*delta_omega_body_radps[0]*inv_delta_omega_mag;
+  v[2] = sindam*delta_omega_body_radps[1]*inv_delta_omega_mag;
+  v[3] = sindam*delta_omega_body_radps[2]*inv_delta_omega_mag;
+
+  s[0] = q_body[0];
+  s[1] = q_body[1];
+  s[2] = q_body[2];
+  s[3] = q_body[3];
   
-  
-  //3
-  s0 = pose_global_arr[0];
-  s1 = pose_global_arr[1];
-  s2 = pose_global_arr[2];
-  s3 = pose_global_arr[3];
-  
-  pose_global_arr[0] = s0*v0 - (s1*v1 + s2*v2 + s3*v3);
-  pose_global_arr[1] = s0*v1 + v0*s1 + s2*v3 - s3*v2;
-  pose_global_arr[2] = s0*v2 + v0*s2 + s3*v1 - s1*v3;
-  pose_global_arr[3] = s0*v3 + v0*s3 + s1*v2 - s2*v1;
+  q_body[0] = s[0]*v[0] - (s[1]*v[1] + s[2]*v[2] + s[3]*v[3]);
+  q_body[1] = s[0]*v[1] + v[0]*s[1] + s[2]*v[3] - s[3]*v[2];
+  q_body[2] = s[0]*v[2] + v[0]*s[2] + s[3]*v[1] - s[1]*v[3];
+  q_body[3] = s[0]*v[3] + v[0]*s[3] + s[1]*v[2] - s[2]*v[1];
   //3 272us
   
-  //4 
-  pose_quat_mag_squared = 
-    pose_global_arr[0]*pose_global_arr[0] +
-    pose_global_arr[1]*pose_global_arr[1] +
-    pose_global_arr[2]*pose_global_arr[2] +
-    pose_global_arr[3]*pose_global_arr[3];
-  //4 64us
+  //Serial.print(q_body[0]); Serial.print(" ");
+  //Serial.print(q_body[1]); Serial.print(" ");
+  //Serial.print(q_body[2]); Serial.print(" ");
+  //Serial.print(q_body[3]); Serial.println(" ");
+
+  static float accel_g2b_angle = 0.;
+  static float accel_mag = 0.;
+  static float n[3] = {0., 0., 0.};
+  static float n_mag = 0.;
+  accel_mag = sqrt(
+    acc_meas[0]*acc_meas[0] +
+    acc_meas[1]*acc_meas[1] +
+    acc_meas[2]*acc_meas[2]
+  );
+  accel_g2b_angle = acos(-1.*acc_meas[2]/accel_mag);
+
+  n[0] = -1.*acc_meas[1];
+  n[1] = acc_meas[0];
+  n[2] = 0.;
+  n_mag = sqrt(
+    n[0]*n[0] + n[1]*n[1]
+  ) + 1e-8;
+
+  static float delta_omega_acc[4] = {0., 0., 0., 0.};
+  static float cosdoa = 0.;
+  static float sindoa = 0.;
+  cosdoa = cos((1 - alpha)*accel_g2b_angle*0.5);
+  sindoa = sin((1 - alpha)*accel_g2b_angle*0.5);
+  delta_omega_acc[0] = cosdoa;
+  delta_omega_acc[1] = sindoa*n[0]/n_mag;
+  delta_omega_acc[2] = sindoa*n[1]/n_mag;
+  delta_omega_acc[3] = sindoa*n[2]/n_mag;
+
+  s[0] = q_body[0];
+  s[1] = q_body[1];
+  s[2] = q_body[2];
+  s[3] = q_body[3];
   
+  v[0] = delta_omega_acc[0];
+  v[1] = delta_omega_acc[1];
+  v[2] = delta_omega_acc[2];
+  v[3] = delta_omega_acc[3];
+
+  //q_body[0] = s[0]*v[0] - (s[1]*v[1] + s[2]*v[2] + s[3]*v[3]);
+  //q_body[1] = s[0]*v[1] + v[0]*s[1] + s[2]*v[3] - s[3]*v[2];
+  //q_body[2] = s[0]*v[2] + v[0]*s[2] + s[3]*v[1] - s[1]*v[3];
+  //q_body[3] = s[0]*v[3] + v[0]*s[3] + s[1]*v[2] - s[2]*v[1];
+
+  pose_quat_mag_squared = 
+    q_body[0]*q_body[0] +
+    q_body[1]*q_body[1] +
+    q_body[2]*q_body[2] +
+    q_body[3]*q_body[3];
+
   if (pose_quat_mag_squared < 0.9801)
   {
     correction = 0.1*(1.0 - pose_quat_mag_squared)*dt;
 
-    pose_global_arr[0] += correction*pose_global_arr[0];
-    pose_global_arr[1] += correction*pose_global_arr[1];
-    pose_global_arr[2] += correction*pose_global_arr[2];
-    pose_global_arr[3] += correction*pose_global_arr[3];
+    q_body[0] += correction*q_body[0];
+    q_body[1] += correction*q_body[1];
+    q_body[2] += correction*q_body[2];
+    q_body[3] += correction*q_body[3];
   }
 
   if (only_accel)
@@ -256,7 +282,10 @@ void updateAngleCalculationsQuaternion(
       phi_acc -= 360;
     }
     
-    theta_acc = atan2(1.*acc_meas[0], sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2]))*RADTODEG;
+    theta_acc = atan2(
+      1.*acc_meas[0],
+      sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2])
+    )*RADTODEG;
 
     *phi_deg_out = phi_acc;
     *theta_deg_out = theta_acc;
@@ -265,34 +294,36 @@ void updateAngleCalculationsQuaternion(
     gyro_prev_degps[1] = gyro_filt_degps[1];
     gyro_prev_degps[2] = gyro_filt_degps[2];
 
-    float costheta = cos(theta_acc*M_PI/360.);
-    float sintheta = sin(theta_acc*M_PI/360.);
+    float costheta = cos(theta_acc*DEGTORAD/2.);
+    float sintheta = sin(theta_acc*DEGTORAD/2.);
 
-    float cosphi = cos(phi_acc*M_PI/360.);
-    float sinphi = sin(phi_acc*M_PI/360.);
+    float cosphi = cos(phi_acc*DEGTORAD/2.);
+    float sinphi = sin(phi_acc*DEGTORAD/2.);
 
-    pose_global_arr[0] =  costheta*cosphi;
-    pose_global_arr[1] =  costheta*sinphi;
-    pose_global_arr[2] =  sintheta*cosphi;
-    pose_global_arr[3] =  sintheta*sinphi;
+    q_body[0] =  costheta*cosphi;
+    q_body[1] =  costheta*sinphi;
+    q_body[2] =  sintheta*cosphi;
+    q_body[3] =  -1.*sintheta*sinphi;
 
     return;
   }
 
   //5
   phi_gyro_temp_deg = atan2(
-    2.*(pose_global_arr[2]*pose_global_arr[3] + pose_global_arr[1]*pose_global_arr[0]),
-    1 - 2.*(pose_global_arr[1]*pose_global_arr[1] + pose_global_arr[2]*pose_global_arr[2])
-  )*RADTODEG - dt*-0.0104633889;
+    2.*(q_body[2]*q_body[3] + q_body[1]*q_body[0]),
+    1 - 2.*(q_body[1]*q_body[1] + q_body[2]*q_body[2])
+  )*RADTODEG;
   //5 300us
+
+  //Serial.print(2.*(q_body[2]*q_body[3] + q_body[1]*q_body[0])); Serial.print(" ");
+  //Serial.print(1 - 2.*(q_body[1]*q_body[1] + q_body[2]*q_body[2])); Serial.println(" ");
 
   //6
   theta_gyro_temp_deg = asin(
-    2.*(pose_global_arr[0]*pose_global_arr[2] - pose_global_arr[1]*pose_global_arr[3])
-  )*RADTODEG - dt*0.0203988087;
+    2.*(q_body[0]*q_body[2] - q_body[1]*q_body[3])
+  )*RADTODEG;
   //6 132us
  
-
   // Complementary filter of gyro and accelerometer.
   //*phi_deg_out = alpha*phi_gyro_temp_deg + (1 - alpha)*phi_acc;
   //*theta_deg_out = alpha*theta_gyro_temp_deg + (1 - alpha)*theta_acc;
@@ -303,7 +334,6 @@ void updateAngleCalculationsQuaternion(
   gyro_prev_degps[0] = gyro_filt_degps[0];
   gyro_prev_degps[1] = gyro_filt_degps[1];
   gyro_prev_degps[2] = gyro_filt_degps[2];
-
 }
 
 /////////////////////////////////////////////////

@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <EEPROM.h>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
-#define CYCLELEN 0000 // Cycle length in microseconds
+#define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 
 #define PRINTRXPULSES      0
@@ -12,7 +12,6 @@
 #define PRINTIMUDEGINPUT   1
 #define PRINTIMUDEGPSINPUT 0
 #define PRINTIMUACCOUTPUT  0
-#define PRINTIMUGYROUPDATE 0
 #define PRINTPIDOUTPUT     0
 #define PRINTPIDCONTROL    0
 #define PRINTMOTORPULSES   0
@@ -186,7 +185,8 @@ void calculateGyroBiases(
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
   *gyro_mag_bias_out = 0.;
-  unsigned int num_trials = 10000;
+  unsigned int num_trials = 50000;
+  Serial.println("Starting gyro bias calculations");
   for (unsigned int i = 0; i < num_trials; ++i)
   {
     getImuData(acc, gyro);
@@ -270,8 +270,6 @@ void loop() {
   static double timeOfLastModeChange = 0.;
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
 
-  static long int counter = 0;
-
   static unsigned long loopTime = 0;
 
   if (!initialized)
@@ -348,30 +346,34 @@ void loop() {
 //  );
 
   //double calct = micros();
+  static double start_micros = 0.;
+  start_micros = micros();
   updateAngleCalculationsQuaternion(
     acc_meas, gyro_meas_degps,
     &phi_rate_gyr_bias, &theta_rate_gyr_bias, &psi_rate_gyr_bias, dt,
     &phi_meas, &theta_meas, &phi_rate_meas, &theta_rate_meas, &psi_rate_meas
   );
+  //Serial.println((micros() - start_micros));
   //Serial.println(micros() - calct);
-  ++counter;
-  static double start_micros = 0.;
-  if (PRINTIMUDEGINPUT && (((counter + 1) % 2) == 0))
+
+  if (PRINTIMUACCOUTPUT)
   {
-    
+    Serial.print(acc_meas[0]); Serial.print(" ");
+    Serial.print(acc_meas[1]); Serial.print(" ");
+    Serial.print(acc_meas[2]); Serial.print(" ");
+  }
+  if (PRINTIMUDEGINPUT)
+  {
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
-    Serial.print(psi_rate_meas); Serial.println(" ");
-    //Serial.println((micros() - start_micros)/100);
-    counter = 0;
-    start_micros = micros();
+    Serial.print(psi_rate_meas); Serial.print(" ");
   }
 
   if (PRINTIMUDEGPSINPUT)
   {
-    Serial.print(phi_rate_meas); Serial.print(" ");
-    Serial.print(theta_rate_meas); Serial.print(" ");
-    Serial.print(psi_rate_meas); Serial.print(" ");
+    Serial.print(phi_rate_meas, 8); Serial.print(" ");
+    Serial.print(theta_rate_meas, 8); Serial.print(" ");
+    Serial.print(psi_rate_meas, 8); Serial.print(" ");
   }
 
   if (PRINTRXPULSES)
@@ -390,10 +392,10 @@ void loop() {
   motor_pulses[3] = rx_pulses[2]*motor_pulses_mask[3];
   */
 
-  motor_pulses[0] = 0;
-  motor_pulses[1] = 0;
-  motor_pulses[2] = 0;
-  motor_pulses[3] = 0;
+  motor_pulses[0] = 2000;
+  motor_pulses[1] = 2000;
+  motor_pulses[2] = 2000;
+  motor_pulses[3] = 2000;
   
   if (PRINTMOTORPULSES)
   {
@@ -463,7 +465,7 @@ void loop() {
     || PRINTIMUDEGPSINPUT
   )
   {
-    //Serial.println("");
+    Serial.println("");
   }
   t = micros();
 }
