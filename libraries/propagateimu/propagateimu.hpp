@@ -100,16 +100,16 @@ void slerp(const float * q1, const float * q2,
   float * q_out
 )
 {
-  static float costo2 = 0.;
-  static float sinto2 = 0.;
+  static float costov2 = 0.;
+  static float sintov2 = 0.;
   static float half_theta = 0.;
-  costo2 = (
+  costov2 = (
     q1[0]*q2[0] +
     q1[1]*q2[1] +
     q1[2]*q2[2] +
     q1[3]*q2[3]
   );
-  if (costo2 > 0.995)
+  if (costov2 > 0.995)
   {
     q_out[0] = q2[0];
     q_out[1] = q2[1];
@@ -118,11 +118,11 @@ void slerp(const float * q1, const float * q2,
     return;
   }
 
-  sinto2 = sqrt(1. - costo2*costo2);
-  half_theta = acos(costo2);
+  sintov2 = sqrt(1. - costov2*costov2);
+  half_theta = acos(costov2);
 
-  static float a = sin((1. - t)*half_theta)/sinto2;
-  static float b = sin((t)*half_theta)/sinto2;
+  static float a = sin((1. - t)*half_theta)/sintov2;
+  static float b = sin((t)*half_theta)/sintov2;
   q_out[0] = q1[0]*a + q2[0]*b;
   q_out[1] = q1[1]*a + q2[1]*b;
   q_out[2] = q1[2]*a + q2[2]*b;
@@ -285,7 +285,7 @@ void updateAngleCalculationsQuaternion(
   n[2] = 0.;
   normalize(n, n_mag);
 
-  if (n_mag > 1e-16)
+  if (n_mag > 1e-8)
   {
     static float delta_beta_f = 0.;
     static float axis_f[3] = {0., 0., 0.};
@@ -299,26 +299,43 @@ void updateAngleCalculationsQuaternion(
     q1[2] = sintemp*n[1];
     q1[3] = sintemp*n[2];
 
-    sintemp = sin(temp_delta_beta/2.);
-    q2[0] = cos(temp_delta_beta/2.);
-    q2[1] = sintemp*temp_axis[0];
-    q2[2] = sintemp*temp_axis[1];
-    q2[3] = sintemp*temp_axis[2];
-    slerp(q1, q2, alpha, q_body);
+    //sintemp = sin(temp_delta_beta/2.);
+    //q2[0] = cos(temp_delta_beta/2.);
+    //q2[1] = sintemp*temp_axis[0];
+    //q2[2] = sintemp*temp_axis[1];
+    //q2[3] = sintemp*temp_axis[2];
+    //slerp(q1, q2, alpha, q_body);
 
-    //static float cosdbf = 0.;
-    //static float sindbf = 0.;
-    //cosdbf = cos(delta_beta_f/2.);
-    //sindbf = sin(delta_beta_f/2.);
-    //q_body[0] = cosdbf;
-    //q_body[1] = sindbf*axis_f[0];
-    //q_body[2] = sindbf*axis_f[1];
-    //q_body[3] = sindbf*axis_f[2];
+    static float temp_quat[4] = {0., 0., 0., 0.};
+    static float acc_meas_global[4] = {0., 0., 0., 0.};
+    q2[0] = 0.;
+    q2[1] = acc_meas[0]/accel_mag;
+    q2[2] = acc_meas[1]/accel_mag;
+    q2[3] = acc_meas[2]/accel_mag;
 
-    //Serial.print(q_body[0]); Serial.print(" ");
-    //Serial.print(q_body[1]); Serial.print(" ");
-    //Serial.print(q_body[2]); Serial.print(" ");
-    //Serial.print(q_body[3]); Serial.println(" ");
+    quatMult(temp_q_body, q2, temp_quat);
+    q2[0] = temp_q_body[0];
+    q2[1] = -1.*temp_q_body[1];
+    q2[2] = -1.*temp_q_body[2];
+    q2[3] = -1.*temp_q_body[3];
+
+    quatMult(temp_quat, q2, acc_meas_global);
+
+    n[0] = 1.*acc_meas_global[1];
+    n[1] = -1.*acc_meas_global[0];
+    n[2] = 0.;
+
+    static float da = 0.;
+    static float temp_sin = 0.;
+    da = acos(-acc_meas_global[2]);
+    temp_sin = sin((1. - alpha)*da/2.);
+    temp_quat[0] = cos((1. - alpha)*da/2.);
+    temp_quat[1] = temp_sin*n[0];
+    temp_quat[2] = temp_sin*n[1];
+    temp_quat[3] = temp_sin*n[2];
+
+    quatMult(temp_quat, temp_q_body, q_body);
+
   }
   else
   {
@@ -335,7 +352,7 @@ void updateAngleCalculationsQuaternion(
     q_body[3]*q_body[3]
   );
 
-  if (pose_quat_mag_squared < 0.9801)
+  if (pose_quat_mag_squared < 0.98)
   {
     static float correction = 0.;
     correction = 0.1*(1.0 - pose_quat_mag_squared)*dt;
@@ -345,7 +362,18 @@ void updateAngleCalculationsQuaternion(
     q_body[2] += correction*q_body[2];
     q_body[3] += correction*q_body[3];
   }
-
+/*
+  phi_acc = atan2(acc_meas[1], acc_meas[2])*RADTODEG + 180;
+  if (phi_acc > 180.)
+  {
+    phi_acc -= 360;
+  }
+  
+  theta_acc = atan2(
+    1.*acc_meas[0],
+    sqrt(acc_meas[1]*acc_meas[1] + acc_meas[2]*acc_meas[2])
+  )*RADTODEG;
+*/
   //5
   phi_gyro_temp_deg = atan2(
     2.*(q_body[2]*q_body[3] + q_body[1]*q_body[0]),
@@ -362,12 +390,18 @@ void updateAngleCalculationsQuaternion(
   )*RADTODEG;
   //6 132us
 
+  //Serial.print(phi_acc); Serial.print(" ");
+  //Serial.print(phi_gyro_temp_deg); Serial.print(" ");
+  //Serial.print(theta_acc); Serial.print(" ");
+  //Serial.print(theta_gyro_temp_deg); Serial.println("");
+
   *phi_deg_out = phi_gyro_temp_deg;
   *theta_deg_out = theta_gyro_temp_deg;
 
   gyro_prev_degps[0] = gyro_filt_degps[0];
   gyro_prev_degps[1] = gyro_filt_degps[1];
   gyro_prev_degps[2] = gyro_filt_degps[2];
+
 }
 
 /////////////////////////////////////////////////
