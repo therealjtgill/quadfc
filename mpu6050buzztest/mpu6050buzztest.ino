@@ -185,8 +185,8 @@ void calculateGyroBiases(
   *theta_rate_bias_out = 0.;
   *psi_rate_bias_out = 0.;
   *gyro_mag_bias_out = 0.;
-  unsigned int num_trials = 50000;
-  Serial.println("Starting gyro bias calculations");
+  unsigned int num_trials = 5000;
+  Serial.println("\n\nStarting gyro bias calculations\n\n");
   for (unsigned int i = 0; i < num_trials; ++i)
   {
     getImuData(acc, gyro);
@@ -204,7 +204,11 @@ void calculateGyroBiases(
   *theta_rate_bias_out /= static_cast<float>(num_trials);
   *psi_rate_bias_out /= static_cast<float>(num_trials);
   *gyro_mag_bias_out /= static_cast<float>(num_trials);
-  Serial.println("Saved to EEPROM.");
+  Serial.println("\n\nSaved to EEPROM:");
+  Serial.println(*phi_rate_bias_out);
+  Serial.println(*theta_rate_bias_out);
+  Serial.println(*psi_rate_bias_out);
+  Serial.println("\n");
   int ee_address = 0;
   EEPROM.put(ee_address, *phi_rate_bias_out);
   ee_address += sizeof(float);
@@ -271,6 +275,7 @@ void loop() {
   static uint16_t motor_pulses_mask[NUMRECEIVERCHANNELS] = {0., 0., 0., 0.};
 
   static unsigned long loopTime = 0;
+  static unsigned int counter = 0;
 
   if (!initialized)
   {
@@ -355,18 +360,23 @@ void loop() {
   );
   //Serial.println((micros() - start_micros));
   //Serial.println(micros() - calct);
-
+  ++counter;
   if (PRINTIMUACCOUTPUT)
   {
     Serial.print(acc_meas[0]); Serial.print(" ");
     Serial.print(acc_meas[1]); Serial.print(" ");
     Serial.print(acc_meas[2]); Serial.print(" ");
   }
-  if (PRINTIMUDEGINPUT)
+  if (PRINTIMUDEGINPUT && (counter + 1 ) > 2)
   {
+    //Serial.print(phi_rate_meas, 5); Serial.print(" ");
+    //Serial.print(theta_rate_meas, 5); Serial.print(" ");
+    //Serial.print(psi_rate_meas, 5); Serial.print(" ");
+    
     Serial.print(phi_meas);      Serial.print(" ");
     Serial.print(theta_meas);    Serial.print(" ");
-    Serial.print(psi_rate_meas); Serial.print(" ");
+    Serial.print(psi_rate_meas); Serial.println(" ");
+    counter = 0;
   }
 
   if (PRINTIMUDEGPSINPUT)
@@ -455,7 +465,7 @@ void loop() {
   if (
        PRINTRXPULSES
     || PRINTMOTORPULSES
-    || PRINTIMUDEGINPUT
+    //|| PRINTIMUDEGINPUT
     || PRINTCYCLELENGTH
     || PRINTPIDOUTPUT
     || PRINTPIDCONTROL
