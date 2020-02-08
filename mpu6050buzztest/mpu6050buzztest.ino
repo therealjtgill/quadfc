@@ -10,7 +10,7 @@
 #define PRINTRXPULSES      0
 #define PRINTSETPOINTS     0
 #define PRINTIMUDEGINPUT   0
-#define PRINTIMUDEGPSINPUT 0
+#define PRINTIMUDEGPSINPUT 1
 #define PRINTIMUACCOUTPUT  0
 #define PRINTIMUGYROUPDATE 0
 #define PRINTPIDOUTPUT     0
@@ -336,8 +336,8 @@ void loop() {
 
   if (PRINTIMUDEGPSINPUT)
   {
-    Serial.print(phi_rate_meas); Serial.print(" ");
-    Serial.print(theta_rate_meas); Serial.print(" ");
+    //Serial.print(phi_rate_meas); Serial.print(" ");
+    //Serial.print(theta_rate_meas); Serial.print(" ");
     Serial.print(psi_rate_meas); Serial.print(" ");
   }
 
