@@ -279,7 +279,7 @@ void rxPulsesToSetPoints(
   {
     *u_phi_out      = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[1]);
     *u_theta_out    = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[0]);
-    *u_psi_rate_out = interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
+    *u_psi_rate_out = -1.*interpolateLinear(1000, 2000, -60., 60., rx_pulses[3]);
 
     *u_phi_out = alpha*(*u_phi_out) + (1 - alpha)*u_phi_prev;
     *u_theta_out = alpha*(*u_theta_out) + (1 - alpha)*u_theta_prev;

@@ -104,26 +104,26 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
-/*
+
   motor_pulses[0] = rx_pulses[2];
   motor_pulses[1] = rx_pulses[2];
   motor_pulses[2] = rx_pulses[2];
   motor_pulses[3] = rx_pulses[2];
-*/
-  if (rx_pulses[2] >= 1700)
-  {
-    motor_pulses[0] = 2000;
-    motor_pulses[1] = 2000;
-    motor_pulses[2] = 2000;
-    motor_pulses[3] = 2000;
-  }
-  else if (rx_pulses[2] <= 1200)
-  {
-    motor_pulses[0] = 1000;
-    motor_pulses[1] = 1000;
-    motor_pulses[2] = 1000;
-    motor_pulses[3] = 1000;
-  }
+
+//  if (rx_pulses[2] >= 1700)
+//  {
+//    motor_pulses[0] = 2000;
+//    motor_pulses[1] = 2000;
+//    motor_pulses[2] = 2000;
+//    motor_pulses[3] = 2000;
+//  }
+//  else if (rx_pulses[2] <= 1200)
+//  {
+//    motor_pulses[0] = 1000;
+//    motor_pulses[1] = 1000;
+//    motor_pulses[2] = 1000;
+//    motor_pulses[3] = 1000;
+//  }
 
   if (PRINTMOTORPULSES)
   {
