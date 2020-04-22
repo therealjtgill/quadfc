@@ -104,12 +104,12 @@ void loop() {
   }
 
   // Throttle = rx_pulses[2]
-/*
+
   motor_pulses[0] = rx_pulses[2];
   motor_pulses[1] = rx_pulses[2];
   motor_pulses[2] = rx_pulses[2];
   motor_pulses[3] = rx_pulses[2];
-*/
+/*
   if (rx_pulses[2] >= 1700)
   {
     motor_pulses[0] = 2000;
@@ -124,7 +124,7 @@ void loop() {
     motor_pulses[2] = 1000;
     motor_pulses[3] = 1000;
   }
-
+*/
   if (PRINTMOTORPULSES)
   {
     Serial.print(motor_pulses[0]); Serial.print(" ");

@@ -3,6 +3,8 @@
 #include <remotestartup.hpp>
 #include <Wire.h>
 #include <EEPROM.h>
+#include <avr/io.h>
+#include <avr/interrupt.h>
 //#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
 #define CYCLELEN 4000 // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4

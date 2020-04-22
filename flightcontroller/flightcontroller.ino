@@ -3,7 +3,8 @@
 #include <Wire.h>
 #include <EEPROM.h>
 #include <remotestartup.hpp>
-//#define CALCULATEANDSAVEGYROBIASES // Enable this to calculate gyro biases and save them to EEPROM.
+// Enable this to calculate gyro biases and save them to EEPROM.
+//#define CALCULATEANDSAVEGYROBIASES
 #define CYCLELEN 4000. // Cycle length in microseconds
 #define NUMRECEIVERCHANNELS 4
 #define MINTHROTTLE 1250
@@ -277,8 +278,8 @@ void rxPulsesToSetPoints(
   uint16_t limited_throttle = min(rx_pulses[2], 1750);
   if (limited_throttle >= MINTHROTTLE)
   {
-    *u_phi_out      = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[1]);
-    *u_theta_out    = -1.*interpolateLinear(1000, 2000, -30., 30., rx_pulses[0]);
+    *u_phi_out      = -1.*interpolateLinear(1000, 2000, -40., 40., rx_pulses[1]);
+    *u_theta_out    = -1.*interpolateLinear(1000, 2000, -40., 40., rx_pulses[0]);
     *u_psi_rate_out = -1.*interpolateLinear(1000, 2000, -120., 120., rx_pulses[3]);
 
     *u_phi_out = alpha*(*u_phi_out) + (1 - alpha)*u_phi_prev;

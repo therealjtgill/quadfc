@@ -7,7 +7,7 @@
 void setup(void)
 {
   Wire.begin();
-  TWBR = 12;
+  //TWBR = 12;
 
   Serial.println("Is this displaying?");
   delay(800);
@@ -46,11 +46,20 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
   Wire.requestFrom(0x68, 14);
 
   while(Wire.available() < 8);
+
+  int16_t byte1 = 0;
+  int16_t byte2 = 0;
   
   for (i = 0; i < 3; ++i)
   {
-    acc_meas_out[i] = (-1.0)*((float)((Wire.read() << 8) | Wire.read()))/4096.;
+    byte1 = Wire.read() << 8;
+    byte2 = Wire.read();
+    acc_meas_out[i] = -1.*static_cast<float>(((byte1) | byte2))/4096.;
+//    Serial.print(byte1 >> 8);
+//    Serial.print(" ");
+//    //Serial.print(byte2);
   }
+//  Serial.println("");
 
   for (i = 0; i < 2; ++i)
   {
@@ -59,12 +68,18 @@ void getImuData(float * acc_meas_out, float * gyro_meas_out)
 
   for (i = 0; i < 3; ++i)
   {
-    gyro_meas_out[i] = (float)((Wire.read() << 8) | Wire.read())/65.5;
+    byte1 = Wire.read() << 8;
+    byte2 = Wire.read();
+    gyro_meas_out[i] = static_cast<float>((byte1) | byte2)/65.5;
     if (i == 1)
     {
       gyro_meas_out[i] *= -1;
     }
+//    Serial.print(byte1 >> 8);
+//    Serial.print(" ");
+//    Serial.print(byte2);
   }
+//  Serial.println("");
 }
 
 /////////////////////////////////////////////////
@@ -226,21 +241,25 @@ void loop(void)
   phi_prev_degps = gyro[0] - phi_gyr_bias;
   theta_prev_degps = gyro[1] - theta_gyr_bias;
 
-  //Serial.print(phi_acc);
-  //Serial.print(" ");
-  //Serial.print(phi_gyr);
-  //Serial.print(theta);
+//  Serial.print(phi_acc);
+//  Serial.print(acc[0]);
+//  Serial.print(" ");
+//  Serial.print(acc[1]);
+//  Serial.print(" ");
+//  Serial.print(acc[2]);
+//  Serial.print(phi_gyr);
+  Serial.print(theta);
   //Serial.print(gyro[0] - phi_gyr_bias);
-  //Serial.print(" ");
+  Serial.print(" ");
   //Serial.print(gyro[1] - theta_gyr_bias);
   //Serial.print(theta_acc);
   //Serial.print(theta_gyr);
-  //Serial.print(phi);
-  //Serial.print(" ");
+  Serial.print(phi);
+  Serial.print(" ");
   //Serial.print(M_PI/180.);
-  //Serial.print(psi_rate);
+  Serial.print(psi_rate);
   //Serial.print(" ");
-  //Serial.println("");
+  Serial.println("");
   
   //Serial.println(micros() - t);
   while ((micros() - t) < 4000);
